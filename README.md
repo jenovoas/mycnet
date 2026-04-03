@@ -70,4 +70,3 @@ mycnet/
 
 ---
 
-**Nota**: Este proyecto es investigación de frontera. Consulta `docs/vision_maestra_clean.md` para el marco teórico completo sobre la captura de energía y la resonancia planetaria.
