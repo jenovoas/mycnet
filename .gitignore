@@ -1,0 +1,27 @@
+# Build artifacts
+/target/
+Cargo.lock.bak
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# macOS
+.DS_Store
+
+# Docker
+.docker/
+
+# Logs
+*.log
+logs/

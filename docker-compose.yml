@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  # MinIO — Storage distribuido EC 4+2 (requiere 6 nodos en producción)
+  # En dev: instancia única para pruebas
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: mycnet-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     mycnet
+      MINIO_ROOT_PASSWORD: mycnet_s60_2026
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  # Prometheus — métricas del mesh
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mycnet-prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  # Grafana — dashboards S60
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mycnet-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: mycnet_s60
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+  grafana_data:

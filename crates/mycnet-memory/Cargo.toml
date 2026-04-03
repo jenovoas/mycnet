@@ -1,0 +1,14 @@
+[package]
+name    = "mycnet-memory"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Sistema de memoria resonante distribuida sobre malla MycNet — Liquid Lattice + Phase Gating"
+
+[dependencies]
+mycnet-core  = { path = "../mycnet-core" }
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+tokio        = { workspace = true }
+tracing      = { workspace = true }
+thiserror    = { workspace = true }
