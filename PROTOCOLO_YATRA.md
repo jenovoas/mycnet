@@ -1,6 +1,6 @@
 # PROTOCOLO YATRA: SOBERANÍA MATEMÁTICA RING-0
 
-Este documento certifica la implementación del **Protocolo Yatra** en el sistema `sentinel-cubepath` para la hackatón.
+Este documento certifica la implementación del **Protocolo Yatra** en el sistema `mycnet`.
 
 ## 1. El Problema de la Entropía Decimal
 El uso de punto flotante (`f32`/`f64`) introduce errores de redondeo indeterministas que pueden corromper la integridad de los latidos del cortex en sistemas de alta fidelidad. En el Ring-0, el caos no está permitido.
