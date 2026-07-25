@@ -48,24 +48,33 @@ impl YhwhPhase {
     /// Parámetros de AQM para batman-adv según la fase.
     pub fn aqm_params(self) -> AqmParams {
         match self.factor() {
-            f if f >= 10 => AqmParams { backfills: 2, recovery_sleep_ms: 50 },
-            f if f >= 6  => AqmParams { backfills: 1, recovery_sleep_ms: 100 },
-            _            => AqmParams { backfills: 1, recovery_sleep_ms: 200 },
+            f if f >= 10 => AqmParams {
+                backfills: 2,
+                recovery_sleep_ms: 50,
+            },
+            f if f >= 6 => AqmParams {
+                backfills: 1,
+                recovery_sleep_ms: 100,
+            },
+            _ => AqmParams {
+                backfills: 1,
+                recovery_sleep_ms: 200,
+            },
         }
     }
 
     pub fn name(self) -> &'static str {
         match self {
-            YhwhPhase::Yod      => "YOD (10)",
-            YhwhPhase::He       => "HE (5)",
-            YhwhPhase::Vav      => "VAV (6)",
-            YhwhPhase::HeFinal  => "HE_FINAL (5)",
+            YhwhPhase::Yod => "YOD (10)",
+            YhwhPhase::He => "HE (5)",
+            YhwhPhase::Vav => "VAV (6)",
+            YhwhPhase::HeFinal => "HE_FINAL (5)",
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AqmParams {
-    pub backfills:         u8,
+    pub backfills: u8,
     pub recovery_sleep_ms: u32,
 }

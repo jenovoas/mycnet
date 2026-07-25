@@ -19,9 +19,9 @@
 //! **Coherencia hexagonal**: si la coherencia del lattice cae < 0.8,
 //! el sector se "cierra" para absorber el daño sin propagarlo.
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use mycnet_core::s60::SPA;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Un nodo del lattice — 16 bytes en memoria (EXP-015 validated).
 /// Layout: amplitude(8) + phase_sector(1) + data(6) + flags(1)
@@ -42,39 +42,74 @@ impl LatticeNode {
 
     pub fn empty() -> Self {
         Self {
-            amplitude:    SPA::zero(),
+            amplitude: SPA::zero(),
             phase_sector: 0,
-            data:         [0u8; 6],
-            flags:        0,
+            data: [0u8; 6],
+            flags: 0,
         }
     }
 
-    pub fn is_occupied(&self) -> bool { self.flags & 0x01 != 0 }
-    pub fn is_closed(&self)   -> bool { self.flags & 0x02 != 0 }
-    pub fn is_dirty(&self)    -> bool { self.flags & 0x04 != 0 }
+    pub fn is_occupied(&self) -> bool {
+        self.flags & 0x01 != 0
+    }
+    pub fn is_closed(&self) -> bool {
+        self.flags & 0x02 != 0
+    }
+    pub fn is_dirty(&self) -> bool {
+        self.flags & 0x04 != 0
+    }
 
     pub fn set_occupied(&mut self, v: bool) {
-        if v { self.flags |= 0x01 } else { self.flags &= !0x01 }
+        if v {
+            self.flags |= 0x01
+        } else {
+            self.flags &= !0x01
+        }
     }
     pub fn set_closed(&mut self, v: bool) {
-        if v { self.flags |= 0x02 } else { self.flags &= !0x02 }
+        if v {
+            self.flags |= 0x02
+        } else {
+            self.flags &= !0x02
+        }
     }
 }
 
 /// Coordenada axial del lattice hexagonal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Coord { pub q: i32, pub r: i32 }
+pub struct Coord {
+    pub q: i32,
+    pub r: i32,
+}
 
 impl Coord {
     /// Los 6 vecinos en coordenadas axiales hexagonales.
     pub fn neighbors(self) -> [Coord; 6] {
         [
-            Coord { q: self.q+1, r: self.r   },
-            Coord { q: self.q+1, r: self.r-1 },
-            Coord { q: self.q,   r: self.r-1 },
-            Coord { q: self.q-1, r: self.r   },
-            Coord { q: self.q-1, r: self.r+1 },
-            Coord { q: self.q,   r: self.r+1 },
+            Coord {
+                q: self.q + 1,
+                r: self.r,
+            },
+            Coord {
+                q: self.q + 1,
+                r: self.r - 1,
+            },
+            Coord {
+                q: self.q,
+                r: self.r - 1,
+            },
+            Coord {
+                q: self.q - 1,
+                r: self.r,
+            },
+            Coord {
+                q: self.q - 1,
+                r: self.r + 1,
+            },
+            Coord {
+                q: self.q,
+                r: self.r + 1,
+            },
         ]
     }
 
@@ -88,10 +123,10 @@ impl Coord {
 /// Paso de difusión — resultado de un tick del lattice.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiffusionStep {
-    pub tick:         u64,
-    pub coherence:    SPA,
-    pub nodes_live:   usize,
-    pub nodes_total:  usize,
+    pub tick: u64,
+    pub coherence: SPA,
+    pub nodes_live: usize,
+    pub nodes_total: usize,
     /// true si este tick disparó el Quantum Leap (T=68s, 17×4 ciclos YHWH)
     pub quantum_leap: bool,
 }
@@ -101,9 +136,9 @@ pub struct DiffusionStep {
 /// Tamaño típico: rings=3 → 37 nodos, rings=6 → 127 nodos.
 /// A 16 bytes/nodo: 127 nodos = ~2KB en RAM.
 pub struct LiquidLattice {
-    pub nodes:     HashMap<Coord, LatticeNode>,
-    pub rings:     u32,
-    pub tick:      u64,
+    pub nodes: HashMap<Coord, LatticeNode>,
+    pub rings: u32,
+    pub tick: u64,
     /// Umbral de coherencia para cierre de sector (EXP hexagonal control)
     pub coherence_threshold: SPA,
 }
@@ -147,15 +182,19 @@ impl LiquidLattice {
         });
 
         for (i, coord) in sorted.iter().enumerate() {
-            if i >= chunks.len() { break; }
+            if i >= chunks.len() {
+                break;
+            }
             if let Some(node) = self.nodes.get_mut(coord) {
-                if node.is_closed() { continue; }
+                if node.is_closed() {
+                    continue;
+                }
 
                 let chunk = chunks[i];
                 let mut buf = [0u8; 6];
                 buf[..chunk.len()].copy_from_slice(chunk);
-                node.data         = buf;
-                node.amplitude    = SPA::from_int((i as i64 + 1) * 10); // energía proporcional a posición
+                node.data = buf;
+                node.amplitude = SPA::from_int((i as i64 + 1) * 10); // energía proporcional a posición
                 node.phase_sector = (i % 256) as u8;
                 node.set_occupied(true);
                 node.set_dirty(true);
@@ -176,7 +215,9 @@ impl LiquidLattice {
 
         let mut out = Vec::with_capacity(len);
         for coord in &coords {
-            if out.len() >= len { break; }
+            if out.len() >= len {
+                break;
+            }
             if let Some(node) = self.nodes.get(coord) {
                 if node.is_occupied() && !node.is_closed() {
                     let remaining = len - out.len();
@@ -196,16 +237,19 @@ impl LiquidLattice {
         self.tick += 1;
 
         // Snapshot del estado actual (necesario para difusión correcta)
-        let snapshot: HashMap<Coord, SPA> = self.nodes.iter()
-            .map(|(c, n)| (*c, n.amplitude))
-            .collect();
+        let snapshot: HashMap<Coord, SPA> =
+            self.nodes.iter().map(|(c, n)| (*c, n.amplitude)).collect();
 
         let mut new_amps: HashMap<Coord, SPA> = HashMap::new();
 
         for (&coord, node) in &self.nodes {
             // Phase gating: solo procesa nodos del slot actual
-            if coord.hex_region() != phase_slot { continue; }
-            if node.is_closed() { continue; }
+            if coord.hex_region() != phase_slot {
+                continue;
+            }
+            if node.is_closed() {
+                continue;
+            }
 
             let mut total = node.amplitude;
             let mut count = 1i64;
@@ -218,7 +262,8 @@ impl LiquidLattice {
             }
 
             // A_new = (A_self + Σ_vecinos) / (1 + N_vecinos)
-            let avg = total.div_safe(SPA::from_int(count))
+            let avg = total
+                .div_safe(SPA::from_int(count))
                 .unwrap_or(node.amplitude);
 
             // Ruido de fase mínimo (simula entropía cuántica)
@@ -242,21 +287,21 @@ impl LiquidLattice {
         self.apply_hexagonal_control();
 
         DiffusionStep {
-            tick:         self.tick,
-            coherence:    self.global_coherence(),
-            nodes_live:   self.nodes.values().filter(|n| !n.is_closed()).count(),
-            nodes_total:  self.nodes.len(),
+            tick: self.tick,
+            coherence: self.global_coherence(),
+            nodes_live: self.nodes.values().filter(|n| !n.is_closed()).count(),
+            nodes_total: self.nodes.len(),
             quantum_leap: false,
         }
     }
 
     /// Coherencia global del lattice: amplitud media normalizada.
     pub fn global_coherence(&self) -> SPA {
-        let active: Vec<&LatticeNode> = self.nodes.values()
-            .filter(|n| !n.is_closed())
-            .collect();
+        let active: Vec<&LatticeNode> = self.nodes.values().filter(|n| !n.is_closed()).collect();
 
-        if active.is_empty() { return SPA::zero(); }
+        if active.is_empty() {
+            return SPA::zero();
+        }
 
         let sum: i64 = active.iter().map(|n| n.amplitude.to_raw()).sum();
         SPA::from_raw(sum / active.len() as i64)
@@ -266,12 +311,16 @@ impl LiquidLattice {
     /// (Hexagonal control — redes_micelio_hexagonal.md §4.3)
     fn apply_hexagonal_control(&mut self) {
         for region in 0u8..6 {
-            let region_nodes: Vec<SPA> = self.nodes.iter()
+            let region_nodes: Vec<SPA> = self
+                .nodes
+                .iter()
                 .filter(|(c, _)| c.hex_region() == region)
                 .map(|(_, n)| n.amplitude)
                 .collect();
 
-            if region_nodes.is_empty() { continue; }
+            if region_nodes.is_empty() {
+                continue;
+            }
 
             let sum: i64 = region_nodes.iter().map(|a| a.to_raw()).sum();
             let avg = SPA::from_raw(sum / region_nodes.len() as i64);
@@ -297,7 +346,9 @@ impl LiquidLattice {
         let pulse_raw = yhwh_factor as i64 * 1000;
 
         for (coord, node) in self.nodes.iter_mut() {
-            if node.is_closed() || !node.is_occupied() { continue; }
+            if node.is_closed() || !node.is_occupied() {
+                continue;
+            }
 
             // El pulso se modula por la región hexagonal del nodo
             // para distribuir energía con variación espacial
@@ -346,32 +397,38 @@ impl LiquidLattice {
 
     /// Vista serializable del lattice para broadcast/API.
     pub fn snapshot(&self) -> Vec<NodeSnapshot> {
-        self.nodes.iter().map(|(coord, node)| NodeSnapshot {
-            q:            coord.q,
-            r:            coord.r,
-            amplitude:    node.amplitude.to_string(),
-            phase_sector: node.phase_sector,
-            occupied:     node.is_occupied(),
-            closed:       node.is_closed(),
-        }).collect()
+        self.nodes
+            .iter()
+            .map(|(coord, node)| NodeSnapshot {
+                q: coord.q,
+                r: coord.r,
+                amplitude: node.amplitude.to_string(),
+                phase_sector: node.phase_sector,
+                occupied: node.is_occupied(),
+                closed: node.is_closed(),
+            })
+            .collect()
     }
 }
 
 /// Vista pública de un nodo para serialización.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeSnapshot {
-    pub q:            i32,
-    pub r:            i32,
-    pub amplitude:    String,
+    pub q: i32,
+    pub r: i32,
+    pub amplitude: String,
     pub phase_sector: u8,
-    pub occupied:     bool,
-    pub closed:       bool,
+    pub occupied: bool,
+    pub closed: bool,
 }
-
 
 impl LatticeNode {
     fn set_dirty(&mut self, v: bool) {
-        if v { self.flags |= 0x04 } else { self.flags &= !0x04 }
+        if v {
+            self.flags |= 0x04
+        } else {
+            self.flags &= !0x04
+        }
     }
 }
 
@@ -409,7 +466,9 @@ mod tests {
         let used = l.inject(data, start);
         assert!(used > 0);
         let recovered = l.retrieve(start, data.len());
-        assert_eq!(&recovered[..data.len().min(recovered.len())],
-                   &data[..data.len().min(recovered.len())]);
+        assert_eq!(
+            &recovered[..data.len().min(recovered.len())],
+            &data[..data.len().min(recovered.len())]
+        );
     }
 }

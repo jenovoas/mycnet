@@ -34,7 +34,7 @@ pub mod client;
 pub mod types;
 
 pub use client::MycNetClient;
-pub use types::{MeshEvent, NodeInfo, MeshSnapshot, NeighborInfo};
+pub use types::{MeshEvent, MeshSnapshot, NeighborInfo, NodeInfo};
 
 /// Trait que los programadores implementan para reaccionar a eventos del mesh.
 ///

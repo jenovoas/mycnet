@@ -4,11 +4,11 @@
 //! - Alimenta el ADM con TQ de nodos físicos
 //! - Expone API HTTP + WebSocket para consumidores externos
 
+use anyhow::Result;
 use std::sync::Arc;
-use tokio::sync::{Mutex, broadcast};
+use tokio::sync::broadcast;
 use tokio::time::{interval, Duration};
 use tracing::{info, warn};
-use anyhow::Result;
 
 mod api;
 mod state;
@@ -22,10 +22,7 @@ const TICK_MS: u64 = 1000 / TICK_HZ;
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(
-            std::env::var("RUST_LOG")
-                .unwrap_or_else(|_| "mycnetd=info".into())
-        )
+        .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "mycnetd=info".into()))
         .init();
 
     info!("🍄 MycNet Daemon arrancando...");
@@ -46,8 +43,7 @@ async fn main() -> Result<()> {
     });
 
     // Servidor HTTP + WebSocket
-    let bind = std::env::var("MYCNET_BIND")
-        .unwrap_or_else(|_| "0.0.0.0:7474".into());
+    let bind = std::env::var("MYCNET_BIND").unwrap_or_else(|_| "0.0.0.0:7474".into());
 
     info!("API escuchando en http://{}", bind);
     let router = api::router(state);

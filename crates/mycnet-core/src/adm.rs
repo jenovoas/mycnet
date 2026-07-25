@@ -6,9 +6,9 @@
 //! Portado y extendido desde sentinel-cubepath/backend/src/mycnet.rs
 //! Autor: Jaime Novoa — Yatra Protocol
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use crate::s60::SPA;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Coordenadas axiales hexagonales expresadas en grados S60.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -29,12 +29,30 @@ impl AxialCoord {
     pub fn neighbors(&self) -> [AxialCoord; 6] {
         let one = SPA::one();
         [
-            AxialCoord { q: self.q + one,  r: self.r         },
-            AxialCoord { q: self.q + one,  r: self.r - one   },
-            AxialCoord { q: self.q,        r: self.r - one   },
-            AxialCoord { q: self.q - one,  r: self.r         },
-            AxialCoord { q: self.q - one,  r: self.r + one   },
-            AxialCoord { q: self.q,        r: self.r + one   },
+            AxialCoord {
+                q: self.q + one,
+                r: self.r,
+            },
+            AxialCoord {
+                q: self.q + one,
+                r: self.r - one,
+            },
+            AxialCoord {
+                q: self.q,
+                r: self.r - one,
+            },
+            AxialCoord {
+                q: self.q - one,
+                r: self.r,
+            },
+            AxialCoord {
+                q: self.q - one,
+                r: self.r + one,
+            },
+            AxialCoord {
+                q: self.q,
+                r: self.r + one,
+            },
         ]
     }
 }
@@ -42,7 +60,7 @@ impl AxialCoord {
 /// Nodo micelial — unidad de procesamiento del ADM.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MycNode {
-    pub coord:     AxialCoord,
+    pub coord: AxialCoord,
     /// Salud energética del nodo (TQ normalizado a SPA)
     pub amplitude: SPA,
     /// Sincronización de fase en grados S60 (Salto-17)
@@ -58,21 +76,21 @@ pub struct MycNode {
 /// 2. Fase inicial: (índice × 17) % 60 grados — Salto-17 soberano.
 /// 3. Un tick = un ciclo de propagación completo.
 pub struct ADM {
-    pub nodes:    HashMap<AxialCoord, MycNode>,
+    pub nodes: HashMap<AxialCoord, MycNode>,
     /// Salto axiomático de fase = 17
-    step_key:     SPA,
+    step_key: SPA,
     /// Número de ticks ejecutados
     pub tick_count: u64,
 }
 
 impl ADM {
     const SPIKE_THRESHOLD: SPA = SPA::new(1, 15, 0, 0, 0);
-    const RECHARGE_STATE:  SPA = SPA::new(0, 30, 0, 0, 0);
+    const RECHARGE_STATE: SPA = SPA::new(0, 30, 0, 0, 0);
 
     pub fn new() -> Self {
         Self {
-            nodes:      HashMap::new(),
-            step_key:   SPA::from_int(17),
+            nodes: HashMap::new(),
+            step_key: SPA::from_int(17),
             tick_count: 0,
         }
     }
@@ -82,12 +100,15 @@ impl ADM {
         let coord = AxialCoord::new(q, r);
         let n = self.nodes.len() as i64;
         let phase_deg = (n * 17) % 60;
-        self.nodes.insert(coord, MycNode {
+        self.nodes.insert(
             coord,
-            amplitude:   SPA::one(),
-            phase_s60:   SPA::new(phase_deg, 0, 0, 0, 0),
-            physical_id: None,
-        });
+            MycNode {
+                coord,
+                amplitude: SPA::one(),
+                phase_s60: SPA::new(phase_deg, 0, 0, 0, 0),
+                physical_id: None,
+            },
+        );
     }
 
     /// Vincula un nodo virtual a un nodo físico de la red batman-adv.
@@ -112,7 +133,8 @@ impl ADM {
 
         for (coord, node) in &mut self.nodes {
             if node.amplitude > Self::SPIKE_THRESHOLD {
-                let energy_per_neighbor = node.amplitude
+                let energy_per_neighbor = node
+                    .amplitude
                     .div_safe(SPA::from_int(12))
                     .unwrap_or(SPA::zero());
                 for neighbor in coord.neighbors() {
@@ -133,35 +155,40 @@ impl ADM {
 
     /// Coherencia global: promedio de amplitudes normalizadas.
     pub fn coherence(&self) -> SPA {
-        if self.nodes.is_empty() { return SPA::zero(); }
-        let sum: i64 = self.nodes.values()
-            .map(|n| n.amplitude.to_raw())
-            .sum();
+        if self.nodes.is_empty() {
+            return SPA::zero();
+        }
+        let sum: i64 = self.nodes.values().map(|n| n.amplitude.to_raw()).sum();
         SPA::from_raw(sum / self.nodes.len() as i64)
     }
 
     /// Snapshot de todos los nodos (para API/WebSocket).
     pub fn snapshot(&self) -> Vec<NodeSnapshot> {
-        self.nodes.values().map(|n| NodeSnapshot {
-            q:           n.coord.q.to_degrees(),
-            r:           n.coord.r.to_degrees(),
-            amplitude:   n.amplitude.to_string(),
-            phase_s60:   n.phase_s60.to_string(),
-            physical_id: n.physical_id.clone(),
-        }).collect()
+        self.nodes
+            .values()
+            .map(|n| NodeSnapshot {
+                q: n.coord.q.to_degrees(),
+                r: n.coord.r.to_degrees(),
+                amplitude: n.amplitude.to_string(),
+                phase_s60: n.phase_s60.to_string(),
+                physical_id: n.physical_id.clone(),
+            })
+            .collect()
     }
 }
 
 impl Default for ADM {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Vista serializable de un nodo para la API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeSnapshot {
-    pub q:           i64,
-    pub r:           i64,
-    pub amplitude:   String,
-    pub phase_s60:   String,
+    pub q: i64,
+    pub r: i64,
+    pub amplitude: String,
+    pub phase_s60: String,
     pub physical_id: Option<String>,
 }
