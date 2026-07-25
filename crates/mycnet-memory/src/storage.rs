@@ -12,13 +12,13 @@
 //! La lectura siempre retorna el dato de mayor amplitud disponible
 //! en los nodos del cluster visible desde este satélite.
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use mycnet_core::s60::SPA;
-use crate::lattice::{LiquidLattice, Coord, DiffusionStep};
+use crate::lattice::{Coord, DiffusionStep, LiquidLattice};
 use crate::phase_gate::PhaseGate;
 use crate::sync::SatelliteSync;
+use mycnet_core::s60::SPA;
 use mycnet_core::yhwh::YhwhPhase;
 
 /// Ticks por Quantum Leap: T=68s × 41.77 Hz ≈ 2840 ticks.
@@ -35,26 +35,26 @@ pub const BIO_PULSE_TICKS: u64 = 710;
 /// Resultado de una operación de almacenamiento.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoreResult {
-    pub ok:          bool,
-    pub nodes_used:  usize,
-    pub coherence:   String,
-    pub tick:        u64,
+    pub ok: bool,
+    pub nodes_used: usize,
+    pub coherence: String,
+    pub tick: u64,
 }
 
 /// Estado del store para monitoreo externo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoreStatus {
-    pub tick:            u64,
-    pub coherence:       String,
-    pub nodes_live:      usize,
-    pub nodes_total:     usize,
-    pub phase:           String,
-    pub yhwh_phase:      String,
-    pub satellite_id:    u8,
+    pub tick: u64,
+    pub coherence: String,
+    pub nodes_live: usize,
+    pub nodes_total: usize,
+    pub phase: String,
+    pub yhwh_phase: String,
+    pub satellite_id: u8,
     /// Número de Quantum Leaps (T=68s) completados desde el inicio
-    pub leap_count:      u64,
+    pub leap_count: u64,
     /// Ticks hasta el próximo Quantum Leap
-    pub ticks_to_leap:   u64,
+    pub ticks_to_leap: u64,
 }
 
 /// Motor de almacenamiento resonante de un satélite.
@@ -62,15 +62,15 @@ pub struct StoreStatus {
 /// Cada satélite tiene su instancia local. Los datos se distribuyen
 /// automáticamente al diffundir hacia los vecinos vía `SatelliteSync`.
 pub struct ResonantStore {
-    pub lattice:        LiquidLattice,
-    pub gate:           PhaseGate,
-    pub sync:           SatelliteSync,
+    pub lattice: LiquidLattice,
+    pub gate: PhaseGate,
+    pub sync: SatelliteSync,
     /// Índice de claves → coordenada de inicio en el lattice
-    key_index:          HashMap<Vec<u8>, Coord>,
+    key_index: HashMap<Vec<u8>, Coord>,
     /// Longitudes originales de datos (para retrieve exacto)
-    key_lengths:        HashMap<Vec<u8>, usize>,
+    key_lengths: HashMap<Vec<u8>, usize>,
     /// Contador de Quantum Leaps ocurridos (telemetría)
-    pub leap_count:     u64,
+    pub leap_count: u64,
 }
 
 impl ResonantStore {
@@ -82,12 +82,12 @@ impl ResonantStore {
     /// - rings=12 → 469 nodos → 2.8 KB por satélite
     pub fn new(satellite_id: u8, rings: u32) -> Self {
         Self {
-            lattice:     LiquidLattice::new(rings),
-            gate:        PhaseGate::new(satellite_id),
-            sync:        SatelliteSync::new(satellite_id),
-            key_index:   HashMap::new(),
+            lattice: LiquidLattice::new(rings),
+            gate: PhaseGate::new(satellite_id),
+            sync: SatelliteSync::new(satellite_id),
+            key_index: HashMap::new(),
             key_lengths: HashMap::new(),
-            leap_count:  0,
+            leap_count: 0,
         }
     }
 
@@ -97,26 +97,30 @@ impl ResonantStore {
     /// Los datos se dispersan en espiral desde ese punto.
     pub fn put(&mut self, key: &[u8], value: &[u8]) -> StoreResult {
         let start = self.key_to_coord(key);
-        let used  = self.lattice.inject(value, start);
+        let used = self.lattice.inject(value, start);
 
         self.key_index.insert(key.to_vec(), start);
         self.key_lengths.insert(key.to_vec(), value.len());
 
         StoreResult {
-            ok:         used > 0,
+            ok: used > 0,
             nodes_used: used,
-            coherence:  self.lattice.global_coherence().to_string(),
-            tick:       self.lattice.tick,
+            coherence: self.lattice.global_coherence().to_string(),
+            tick: self.lattice.tick,
         }
     }
 
     /// Recupera datos por clave.
     /// Retorna None si la clave no existe o la coherencia es insuficiente.
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        let start  = *self.key_index.get(key)?;
+        let start = *self.key_index.get(key)?;
         let length = *self.key_lengths.get(key)?;
-        let data   = self.lattice.retrieve(start, length);
-        if data.is_empty() { None } else { Some(data) }
+        let data = self.lattice.retrieve(start, length);
+        if data.is_empty() {
+            None
+        } else {
+            Some(data)
+        }
     }
 
     /// Tick principal del store.
@@ -162,7 +166,9 @@ impl ResonantStore {
         // Difusión del slot activo (phase gating)
         // Ruido mínimo: bit bajo del tick como seed de entropía
         let noise = (crystal_tick & 0x07) as u8;
-        let mut step = self.lattice.diffuse_tick(gate_state.active_region.as_u8(), noise);
+        let mut step = self
+            .lattice
+            .diffuse_tick(gate_state.active_region.as_u8(), noise);
         step.quantum_leap = is_quantum_leap;
         step
     }
@@ -177,13 +183,18 @@ impl ResonantStore {
 
         StoreStatus {
             tick,
-            coherence:      step_info.to_string(),
-            nodes_live:     self.lattice.nodes.values().filter(|n| !n.is_closed()).count(),
-            nodes_total:    self.lattice.nodes.len(),
-            phase:          format!("{}", self.gate.crystal_tick % 6),
-            yhwh_phase:     yhwh.name().to_string(),
-            satellite_id:   self.gate.satellite_id,
-            leap_count:     self.leap_count,
+            coherence: step_info.to_string(),
+            nodes_live: self
+                .lattice
+                .nodes
+                .values()
+                .filter(|n| !n.is_closed())
+                .count(),
+            nodes_total: self.lattice.nodes.len(),
+            phase: format!("{}", self.gate.crystal_tick % 6),
+            yhwh_phase: yhwh.name().to_string(),
+            satellite_id: self.gate.satellite_id,
+            leap_count: self.leap_count,
             ticks_to_leap,
         }
     }
@@ -191,7 +202,9 @@ impl ResonantStore {
     /// Convierte una clave a coordenada axial del lattice.
     /// Hash simple: XOR de bytes → (q, r) dentro del lattice.
     fn key_to_coord(&self, key: &[u8]) -> Coord {
-        let h: u32 = key.iter().enumerate()
+        let h: u32 = key
+            .iter()
+            .enumerate()
             .fold(0u32, |acc, (i, &b)| acc ^ ((b as u32) << (i % 24)));
 
         let r_max = self.lattice.rings as i32;
@@ -229,7 +242,7 @@ mod tests {
     fn multiple_keys_coexist() {
         let mut store = ResonantStore::new(0, 6);
         store.put(b"key_alpha", b"valor_uno");
-        store.put(b"key_beta",  b"valor_dos");
+        store.put(b"key_beta", b"valor_dos");
         assert!(store.get(b"key_alpha").is_some());
         assert!(store.get(b"key_beta").is_some());
     }

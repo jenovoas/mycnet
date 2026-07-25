@@ -6,15 +6,15 @@
 //!   GET  /api/v1/adm      — estado interno del ADM
 //!   WS   /api/v1/stream   — telemetría en tiempo real
 
-use std::sync::Arc;
 use axum::{
-    Router,
-    routing::get,
+    extract::ws::{Message, WebSocket},
     extract::{State, WebSocketUpgrade},
-    extract::ws::{WebSocket, Message},
-    response::{Json, IntoResponse},
+    response::{IntoResponse, Json},
+    routing::get,
+    Router,
 };
 use serde_json::{json, Value};
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::info;
 
@@ -22,10 +22,10 @@ use crate::state::AppState;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/health",          get(health))
-        .route("/api/v1/mesh",     get(mesh_state))
-        .route("/api/v1/adm",      get(adm_state))
-        .route("/api/v1/stream",   get(ws_handler))
+        .route("/health", get(health))
+        .route("/api/v1/mesh", get(mesh_state))
+        .route("/api/v1/adm", get(adm_state))
+        .route("/api/v1/stream", get(ws_handler))
         .with_state(state)
 }
 
@@ -53,10 +53,7 @@ async fn adm_state(State(state): State<Arc<AppState>>) -> Json<Value> {
     }))
 }
 
-async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_ws(socket, state))
 }
 
