@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # SPA — Sexagesimal Fixed-Point Arithmetic (Base-60)
 //!
 //! Motor matemático propietario. Protocolo Yatra Pure.

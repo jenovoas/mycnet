@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # mycnet-core — Núcleo Privado MycNet
 //!
 //! IP propietaria: S60 Engine + ADM (Axial Diffusion Model) + Mesh batman-adv.

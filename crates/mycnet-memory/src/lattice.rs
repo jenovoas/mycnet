@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # LiquidLattice — Tejido de Memoria Resonante
 //!
 //! Portado desde EXP-009 (Liquid Lattice 3×3) a escala distribuida.
