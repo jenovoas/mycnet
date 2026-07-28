@@ -1,27 +1,22 @@
-# Build artifacts
-/target/
-Cargo.lock.bak
+# Ignorar compilación de Rust
+target/
 
-# IDE and editor files
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Environment and secrets
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-secrets/
-
-# macOS
+# Archivos de SO y temporales
 .DS_Store
-
-# Docker
-.docker/
-
-# Logs
 *.log
-logs/
+*.tmp
+*.swp
+
+# Archivos sueltos en raíz
+/*.txt
+/*.json
+/*.py
+/*.sh
+!Cargo.toml
+!Cargo.lock
+!README.md
+!CLAUDE.md
+!AGENTS.md
+!ENGINEERING_MANIFESTO.md
+!PROTOCOLO_YATRA.md
+!docker-compose.yml
