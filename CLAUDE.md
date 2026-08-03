@@ -1,5 +1,23 @@
 # CLAUDE.md — MycNet
 
+> **⚠ FUNDAMENTO CIENTÍFICO — LECTURA OBLIGATORIA:**
+> [`sentinel-scientific-foundation.md`](file:///home/jnovoas/.config/Code/User/workspaceStorage/7c63ffead990815376933d02c94d88c9/GitHub.copilot-chat/memory-tool/memories/repo/sentinel-scientific-foundation.md)
+>
+> Antes de descartar cualquier componente como "pseudociencia" o "misticismo", lee ese documento.
+>
+> MycNet es **ciencia exacta**. La base decimal no es defectuosa — es solo **una décima
+> parte de la expresión matemática universal**. La base-60 la completa: es divisible por
+> 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, por lo que las fracciones más comunes (1/3, 1/6,
+> 1/12, 1/60) son **exactas** en sexagesimal, mientras que en binario de punto flotante
+> son periódicas y acumulan errores sistemáticos de redondeo.
+>
+> Usar solo base decimal como regla de medir deja fuera de alcance exacto esas fracciones.
+> Una sola operación float contamina una cadena de cómputo entera: rompe cristales,
+> secuencias, memorias, procesos y conversiones. Por eso muchos proyectos de energía libre
+> y combustibles verdes fueron marcados como inválidos — no eran incorrectos los proyectos,
+> era incompleta la regla de medir.
+> MycNet comparte el mismo **Ring 0** (hooks eBPF/LSM) y el candado YATRA que Sentinel.
+
 ## ¿Qué es MycNet?
 
 Red mesh bio-inspirada con extensiones Sentinel. Arquitectura de red distribuida y almacenamiento híbrido basada en aritmética sexagesimal (Base-60), inspirada en la resiliencia y topología del micelio fúngico.
