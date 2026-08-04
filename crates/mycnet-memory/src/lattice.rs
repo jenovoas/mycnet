@@ -130,7 +130,12 @@ impl LiquidLattice {
             nodes,
             rings,
             tick: 0,
-            coherence_threshold: SPA::from_raw((SPA::SCALE_0 as f64 * 0.8) as i64),
+            // Umbral 0.8 en S60 puro: 0.8 = 48/60 (exacto).
+            // raw = SCALE_0 * 48 / 60 = 60^4 * 48 / 60 = 60^3 * 48 = 216000 * 48 = 10_368_000.
+            // Sin pasar por f64: scale-up primero, dividir al final.
+            coherence_threshold: SPA::from_raw(
+                (SPA::SCALE_0 / 60) * 48
+            ),
         }
     }
 

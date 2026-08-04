@@ -119,11 +119,29 @@ pub fn mesh_coherence(neighbors: &[Neighbor]) -> SPA {
 }
 
 fn parse_last_seen(s: &str) -> u64 {
-    // "0.200s" → 200ms
+    // "0.200s" → 200 ms (S60 puro, sin f64).
+    // Formato batctl: d.ddd s — separar parte entera y decimal de segundos.
+    // 1 s = 1000 ms, 1 s = 60^2 = 3600 tercias S60.
+    // Conversion: ms = (int_secs * 1000 + frac_int * 1000 / 10^decimales)
+    // Scale-up primero, dividir al final para evitar truncamiento temprano.
     let s = s.trim_end_matches('s');
-    s.parse::<f64>()
-        .map(|v| (v * 1000.0) as u64)
-        .unwrap_or(0)
+    let (int_part, frac_part) = match s.split_once('.') {
+        Some((i, f)) => (i, f),
+        None => (s, ""),
+    };
+
+    let int_secs: u64 = int_part.parse().unwrap_or(0);
+
+    // Fracción decimal: 0.200 → 200 ms (×1000/10^3)
+    let frac_ms: u64 = if frac_part.is_empty() {
+        0
+    } else {
+        let frac_int: u64 = frac_part.parse().unwrap_or(0);
+        let denom: u64 = 10u64.pow(frac_part.len() as u32);
+        (frac_int * 1000) / denom
+    };
+
+    int_secs * 1000 + frac_ms
 }
 
 #[cfg(test)]

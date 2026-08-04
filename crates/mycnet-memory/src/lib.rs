@@ -27,8 +27,10 @@ pub mod lattice;
 pub mod phase_gate;
 pub mod sync;
 pub mod storage;
+pub mod sentinel_bridge;
 
 pub use lattice::{LiquidLattice, LatticeNode, DiffusionStep};
 pub use phase_gate::{PhaseGate, HexRegion};
 pub use sync::{BoundaryPacket, SatelliteSync};
 pub use storage::{ResonantStore, StoreResult};
+pub use sentinel_bridge::{SentinelBridge, SentinelOscillator, SentinelSPA, SENTINEL_LATTICE_SHM_NAME};
