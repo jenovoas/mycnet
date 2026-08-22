@@ -9,7 +9,7 @@
 //! ## Física implementada
 //!
 //! **Difusión Von Neumann** (vecindario en cruz, snapshot atómico):
-//! ```
+//! ```text
 //! A_new[i] = (A[i] + Σ A[vecinos]) / (1 + N_vecinos)
 //! ```
 //! La actualización es ATÓMICA: todos los nodos leen el estado anterior,
