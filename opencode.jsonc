@@ -7,7 +7,7 @@
         "code-review-graph",
         "serve",
         "--repo",
-        "/home/jnovoas/Proyectos/mycnet"
+        "/home/jnovoas/proyectos/mycnet"
       ]
     }
   }

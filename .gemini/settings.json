@@ -6,7 +6,7 @@
         "code-review-graph",
         "serve"
       ],
-      "cwd": "/home/jnovoas/Proyectos/mycnet"
+      "cwd": "/home/jnovoas/proyectos/mycnet"
     }
   },
   "hooks": {
