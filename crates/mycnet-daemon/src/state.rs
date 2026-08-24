@@ -3,17 +3,17 @@
 // Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! Estado compartido del daemon.
 
-use std::sync::Arc;
 use tokio::sync::{Mutex, broadcast};
 use serde_json::json;
 use anyhow::Result;
 use tracing::{info, warn};
 
 use mycnet_core::{ADM, MeshState, PhysicalNode};
+use mycnet_core::s60::HolographicSeedBinary;
 use mycnet_core::mesh::{get_local_neighbors, mesh_coherence};
 use mycnet_core::yhwh::YhwhPhase;
-use mycnet_memory::lattice::LiquidLattice;
-use mycnet_memory::sentinel_bridge::SentinelBridge;
+use mycnet_memory::lattice::{Coord, LiquidLattice};
+use mycnet_memory::sentinel_bridge::{SentinelBridge, SentinelFractalBridge};
 
 /// Cadencia de refresco desde el lattice fonónico de sentinel:
 /// cada 17 ticks = ~405 ms @ 42 Hz = el Salto-17 soberano de Plimpton.
@@ -26,30 +26,24 @@ const SENTINEL_REFRESH_EVERY_TICKS: u64 = 17;
 const SENTINEL_LATTICE_RINGS: u32 = 3;
 
 pub struct AppState {
-    pub adm:      Mutex<ADM>,
-    pub tx:       broadcast::Sender<String>,
-    pub hostname: String,
-    pub bat_ip:   String,
-    /// Lattice fonónico espejo del lattice sentinel (mycnet-memory).
-    /// Se actualiza cada 17 ticks vía SentinelBridge. Distinto del ADM:
-    /// el ADM captura topología batman-adv; el lattice captura resonancia fonónica.
-    pub lattice:  Mutex<LiquidLattice>,
-    /// Puente SHM zero-copy con ~/Proyectos/sentinel (lattice fonónico).
-    /// None si sentinel-cortex no está corriendo o el SHM no existe.
-    pub sentinel: Mutex<Option<SentinelBridge>>,
+    pub adm:            Mutex<ADM>,
+    pub tx:             broadcast::Sender<String>,
+    pub hostname:       String,
+    pub bat_ip:         String,
+    pub lattice:        Mutex<LiquidLattice>,
+    pub sentinel:       Mutex<Option<SentinelBridge>>,
+    pub fractal_bridge: Mutex<Option<SentinelFractalBridge>>,
 }
 
 impl AppState {
     pub fn new(tx: broadcast::Sender<String>) -> Self {
         let mut adm = ADM::new();
 
-        // Red hexagonal de 6 nodos (topología estándar MycNet)
-        // Anillo hexagonal alrededor del origen
         let hex_ring = [
             (1, 0), (1, -1), (0, -1),
             (-1, 0), (-1, 1), (0, 1),
         ];
-        adm.add_node(0, 0); // nodo central
+        adm.add_node(0, 0);
         for (q, r) in hex_ring {
             adm.add_node(q, r);
         }
@@ -62,9 +56,6 @@ impl AppState {
         let bat_ip = std::env::var("MYCNET_BAT_IP")
             .unwrap_or_else(|_| "10.10.0.11".into());
 
-        // Puente SHM con sentinel — opcional, no bloqueante al arranque.
-        // Si sentinel-cortex no corre, el daemon opera en modo standalone
-        // (ADM alimenta solo desde batctl local).
         let sentinel = match SentinelBridge::open() {
             Ok(bridge) => {
                 info!(
@@ -77,9 +68,19 @@ impl AppState {
             Err(e) => {
                 warn!(
                     error = %e,
-                    "SentinelBridge no disponible — daemon en modo standalone (batctl → ADM sin espejo fonónico). \
-                     ¿sentinel-cortex corriendo y con SHM /me60os_lattice inicializado?"
+                    "SentinelBridge no disponible — daemon en modo standalone"
                 );
+                None
+            }
+        };
+
+        let fractal_bridge = match SentinelFractalBridge::open() {
+            Ok(bridge) => {
+                info!("SentinelFractalBridge conectado — ring buffer de semillas /dev/shm/me60os_fractal_seeds activo");
+                Some(bridge)
+            }
+            Err(e) => {
+                warn!(error = %e, "SentinelFractalBridge no disponible — sin ring buffer de semillas en /dev/shm");
                 None
             }
         };
@@ -91,6 +92,7 @@ impl AppState {
             bat_ip,
             lattice: Mutex::new(LiquidLattice::new(SENTINEL_LATTICE_RINGS)),
             sentinel: Mutex::new(sentinel),
+            fractal_bridge: Mutex::new(fractal_bridge),
         }
     }
 
@@ -198,6 +200,39 @@ impl AppState {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs(),
+        }
+    }
+
+    /// Inyecta una semilla fractal recibida desde la red mesh remota.
+    pub async fn ingest_remote_seed(&self, seed: HolographicSeedBinary) -> std::result::Result<Coord, &'static str> {
+        let mut lattice = self.lattice.lock().await;
+        let coord = lattice.inject_fractal_seed(&seed)?;
+
+        let _ = self.tx.send(json!({
+            "type": "fractal_seed_ingested",
+            "token_id": seed.token_id,
+            "coord": [coord.q, coord.r],
+            "amplitude_s60": seed.amplitude_s60,
+            "phase_sector": seed.phase_sector,
+        }).to_string());
+
+        Ok(coord)
+    }
+
+    /// Sondea semillas nuevas generadas por Sentinel en SHM para difundirlas a la red mesh.
+    pub async fn poll_local_fractal_seeds(&self) -> Vec<HolographicSeedBinary> {
+        let mut bridge_guard = self.fractal_bridge.lock().await;
+        if let Some(ref mut bridge) = *bridge_guard {
+            let seeds = bridge.poll_new_seeds(32);
+            if !seeds.is_empty() {
+                let mut lattice = self.lattice.lock().await;
+                for seed in &seeds {
+                    let _ = lattice.inject_fractal_seed(seed);
+                }
+            }
+            seeds
+        } else {
+            Vec::new()
         }
     }
 }

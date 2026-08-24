@@ -216,7 +216,7 @@ impl LiquidLattice {
         if !seed.is_valid_crc() {
             return Err("Checksum CRC16 inválido en la semilla fractal");
         }
-        let coord = seed.to_coord().ok_or("Invariante espacial cúbica violada (q+r+s != 0)")?;
+        let coord = Coord::from_cubic(seed.coord_q, seed.coord_r, seed.coord_s).ok_or("Invariante espacial cúbica violada (q+r+s != 0)")?;
         
         let node = self.nodes.get_mut(&coord).ok_or("Coordenada fuera de los límites del lattice")?;
         if node.is_closed() {

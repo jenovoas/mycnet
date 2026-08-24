@@ -11,7 +11,66 @@
 use std::process::Command;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use crate::s60::SPA;
+use crate::s60::{SPA, HolographicSeedBinary};
+
+pub const FRACTAL_PACKET_MAGIC: u32 = 0x4D594353; // "MYCS"
+pub const FRACTAL_PROTOCOL_VERSION: u16 = 1;
+
+/// Paquete de red para transporte de semillas fractales sobre malla (40 bytes exactos).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FractalMeshPacket {
+    pub magic: u32,
+    pub version: u16,
+    pub sequence_id: u16,
+    pub seed: HolographicSeedBinary,
+}
+
+const _: () = assert!(
+    std::mem::size_of::<FractalMeshPacket>() == 40,
+    "FractalMeshPacket debe medir exactamente 40 bytes según OpenSpec"
+);
+
+impl FractalMeshPacket {
+    pub fn new(sequence_id: u16, seed: HolographicSeedBinary) -> Self {
+        Self {
+            magic: FRACTAL_PACKET_MAGIC,
+            version: FRACTAL_PROTOCOL_VERSION,
+            sequence_id,
+            seed,
+        }
+    }
+
+    pub fn to_bytes(&self) -> [u8; 40] {
+        let mut bytes = [0u8; 40];
+        bytes[0..4].copy_from_slice(&self.magic.to_le_bytes());
+        bytes[4..6].copy_from_slice(&self.version.to_le_bytes());
+        bytes[6..8].copy_from_slice(&self.sequence_id.to_le_bytes());
+        bytes[8..40].copy_from_slice(&self.seed.to_bytes());
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8; 40]) -> Result<Self, &'static str> {
+        let magic = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        if magic != FRACTAL_PACKET_MAGIC {
+            return Err("Magic header inválido (no es un paquete MYCS)");
+        }
+        let version = u16::from_le_bytes(bytes[4..6].try_into().unwrap());
+        if version != FRACTAL_PROTOCOL_VERSION {
+            return Err("Versión de protocolo de semilla no soportada");
+        }
+        let sequence_id = u16::from_le_bytes(bytes[6..8].try_into().unwrap());
+        let seed_bytes: [u8; 32] = bytes[8..40].try_into().unwrap();
+        let seed = HolographicSeedBinary::from_bytes(&seed_bytes)?;
+
+        Ok(Self {
+            magic,
+            version,
+            sequence_id,
+            seed,
+        })
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum MeshError {
@@ -175,5 +234,30 @@ aa:00:00:00:00:04    1.000s   90 eth1
             last_seen_ms: 100,
         };
         assert_eq!(n.tq_s60, SPA::one());
+    }
+
+    #[test]
+    fn fractal_mesh_packet_wire_layout_40_bytes() {
+        assert_eq!(std::mem::size_of::<FractalMeshPacket>(), 40);
+    }
+
+    #[test]
+    fn fractal_mesh_packet_roundtrip_and_corruption_rejection() {
+        let seed = HolographicSeedBinary::from_lfm(123, 2, -2, 45);
+        let packet = FractalMeshPacket::new(1, seed);
+
+        let bytes = packet.to_bytes();
+        assert_eq!(bytes.len(), 40);
+
+        let decoded = FractalMeshPacket::from_bytes(&bytes).expect("Decodificación falló");
+        assert_eq!(packet, decoded);
+
+        let mut bad_magic = bytes;
+        bad_magic[0] = 0x00;
+        assert!(FractalMeshPacket::from_bytes(&bad_magic).is_err());
+
+        let mut bad_payload = bytes;
+        bad_payload[10] ^= 0xFF;
+        assert!(FractalMeshPacket::from_bytes(&bad_payload).is_err());
     }
 }
