@@ -99,7 +99,7 @@ pub fn parse_batctl_neighbors(output: &str) -> Result<Vec<Neighbor>, MeshError> 
 
 /// Ejecuta `batctl n` y retorna los vecinos del nodo local.
 pub fn get_local_neighbors() -> Result<Vec<Neighbor>, MeshError> {
-    let output = Command::new("batctl")
+    let output = Command::new("/usr/sbin/batctl")
         .arg("n")
         .output()
         .map_err(|e| MeshError::BatctlNotFound(e.to_string()))?;

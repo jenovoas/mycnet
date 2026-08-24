@@ -114,7 +114,7 @@ impl AppState {
 // Pequeña dependencia para hostname
 mod hostname {
     pub fn get() -> Result<std::ffi::OsString, ()> {
-        std::process::Command::new("hostname")
+        std::process::Command::new("/usr/bin/hostname")
             .output()
             .map(|o| std::ffi::OsString::from(
                 String::from_utf8_lossy(&o.stdout).trim().to_string()
