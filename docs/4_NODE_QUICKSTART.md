@@ -1,5 +1,7 @@
 # MycNet: Quickstart con 4 Nodos (PCs)
 
+> ⚠️ **DOCUMENTO HISTÓRICO** (2026-08-24): La infraestructura descrita aquí (LAN de 4 PCs, `192.168.1.x` / `10.10.0.x`) no existe actualmente. La infra viva es un único nodo `fenix` en Azure — ver [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md). El procedimiento sigue siendo la referencia válida para cuando se escale a multi-nodo.
+
 **Configuración inicial**: 4 PCs viejas con Linux  
 **Objetivo**: Validar mesh + storage distribuido  
 **Timeline**: 3-5 días

@@ -1,5 +1,7 @@
 # MycNet: Adaptación 4 Nodos (PCs)
 
+> ⚠️ **DOCUMENTO HISTÓRICO** (2026-08-24): Registro de la adaptación a 4 PCs, infra ya retirada. Infra actual: nodo único `fenix` en Azure — ver [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md).
+
 ## Cambios Realizados
 
 ### ✅ Scripts Actualizados

@@ -55,10 +55,10 @@ Extraídas del ENGINEERING_MANIFESTO.md:
 
 ## Despliegue
 
-- **Server único**: `fan` (configurado en `~/.ssh/config`, puerto 4222, llave `~/.ssh/id_ed25519_server`)
-- **Nodo**: sentinel-cubepath eliminado post-hackatón. Todo en `fan`.
-- **RAM disponible**: 4GB (confirmado en nodo original)
-- **Protocolo**: `systemctl stop mycnet` en remoto → sustitución atómica del binario → `systemctl start mycnet`
+- **Server único**: `fenix` — VM Azure `Standard_D4as_v6` (4 vCPU / 15 GiB RAM), Brazil South, IP pública `20.226.112.222`. Inventario completo en `docs/INFRAESTRUCTURA.md`.
+- **Infra retirada**: `sentinel-cubepath` (CubePath) y el antiguo `fenix` (GCloud) ya no existen. El `fenix` actual es una VM nueva en Azure (en línea desde 2026-08-23).
+- **Ring 0**: eBPF/LSM activo en el nodo (`ai_guardian`, `guardian_cognitive`, `cortex_events`, `float_detector`, `gamma_heartbeat` en `/sys/fs/bpf`).
+- **Protocolo**: `systemctl stop mycnet` → sustitución atómica del binario → `systemctl start mycnet`
 - Verificar procesos huérfanos con `ps aux | grep mycnet`
 
 ## Archivos de Contexto Obligatorio

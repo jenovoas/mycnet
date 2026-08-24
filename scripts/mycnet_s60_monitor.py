@@ -81,7 +81,7 @@ def get_batman_neighbors() -> list:
         # Check if bat0 exists manually to avoid error messages
         with open("/proc/net/dev", "r") as f:
             if "bat0" not in f.read():
-                # Fallback: if no bat0, assume we are on fenix/hub and mock health 1.0
+                # Fallback: if no bat0, assume standalone node (no mesh) and mock health 1.0
                 return [{"neighbor": "hub-uplink", "last_seen": "0.0s", "tq": 255}]
 
         # Check if batctl exists

@@ -9,7 +9,7 @@
 //!
 //! ## Uso rápido
 //!
-//! ```rust
+//! ```rust,no_run
 //! use mycnet_connect::{MycNetClient, MycNetHandler, MeshEvent, NodeInfo};
 //!
 //! struct MyApp;

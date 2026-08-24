@@ -2,7 +2,7 @@
 
 **MycNet** es una arquitectura de red distribuida y almacenamiento híbrido diseñada para operar bajo los principios de **Resonancia Armónica** y **Aritmética Sexagesimal (Base-60)**. Inspirada en la resiliencia y topología del micelio fúngico, busca minimizar la entropía computacional y eliminar el error de truncamiento inherente a los sistemas decimales tradicionales.
 
-El proyecto se encuentra parcialmente implementado y validado en los servidores de prueba **fenix** y **sentinel-cubepath**.
+El proyecto opera actualmente sobre un único nodo: **`fenix`** (VM Azure, Brazil South). Ver [`docs/INFRAESTRUCTURA.md`](docs/INFRAESTRUCTURA.md) para el inventario vivo. Las referencias históricas a `sentinel-cubepath` (CubePath) y al antiguo `fenix` (GCloud) corresponden a infraestructura ya retirada.
 
 ---
 
@@ -64,8 +64,10 @@ mycnet/
 ---
 
 ## 🚀 Estado de la Implementación
-*   **Validación de Red**: Mesh `bat0` operativo en nodos Fenix con latencia estable.
-*   **Sincronización**: Fase de pruebas del `yhwh_driver` para control de deriva en `sentinel-cubepath`.
+*   **Nodo único**: `fenix` — Azure `Standard_D4as_v6` (4 vCPU / 15 GiB), Brazil South, Ubuntu 24.04, kernel 6.17. Detalle completo en [`docs/INFRAESTRUCTURA.md`](docs/INFRAESTRUCTURA.md).
+*   **Ring 0 eBPF/LSM**: **operativo** — `ai_guardian`, `guardian_cognitive`, `cortex_events`, `float_detector`, `gamma_heartbeat` pineados en `/sys/fs/bpf`.
+*   **Red**: WireGuard (`wg0`, `10.88.0.1/24`) activo. Mesh `batman-adv` (`bat0`) **no desplegada** aún en el nuevo nodo.
+*   **Sincronización**: `yhwh_driver` pendiente de revalidar deriva en el nuevo `fenix`.
 *   **Métricas**: Instrumentación básica de TQ (Transmit Quality) mapeada a formatos SPA.
 
 ---

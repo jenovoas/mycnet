@@ -25,11 +25,144 @@ use tracing::{debug, warn};
 
 use mycnet_core::s60::SPA;
 
+use crate::holographic_sync::HolographicSeedBinary;
 use crate::lattice::{Coord, LiquidLattice};
+use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Nombre estándar del segmento SHM que crea sentinel.
-/// Coincide con `me-60os-core` (resonant_matrix.rs::sync_to_shm).
+/// Nombre estándar del segmento SHM que crea sentinel para el lattice fonónico.
 pub const SENTINEL_LATTICE_SHM_NAME: &str = "/me60os_lattice";
+
+/// Nombre estándar del segmento SHM que crea sentinel para el ring buffer de semillas fractales.
+pub const SENTINEL_FRACTAL_SEEDS_SHM_NAME: &str = "/me60os_fractal_seeds";
+
+/// Capacidad estándar del ring buffer de semillas fractales.
+pub const FRACTAL_SEEDS_CAPACITY: usize = 1024;
+
+/// Header del ring buffer lock-free de semillas fractales en SHM (64 bytes).
+#[repr(C)]
+pub struct FractalRingHeader {
+    pub magic: u32,
+    pub version: u32,
+    pub head: AtomicU64,
+    pub tail: AtomicU64,
+    pub reserved: [u8; 40],
+}
+
+const _: () = assert!(
+    std::mem::size_of::<FractalRingHeader>() == 64,
+    "FractalRingHeader debe medir exactamente 64 bytes"
+);
+
+/// Handle al segmento SHM de semillas fractales en modo lector.
+pub struct SentinelFractalBridge {
+    name: String,
+    shm_size: usize,
+    ptr: *mut u8,
+    fd: i32,
+    last_tail: u64,
+}
+
+unsafe impl Send for SentinelFractalBridge {}
+unsafe impl Sync for SentinelFractalBridge {}
+
+impl SentinelFractalBridge {
+    pub fn open() -> Result<Self, SentinelBridgeError> {
+        Self::open_named(SENTINEL_FRACTAL_SEEDS_SHM_NAME)
+    }
+
+    pub fn open_named(name: &str) -> Result<Self, SentinelBridgeError> {
+        let c_name = CString::new(name).map_err(|e| SentinelBridgeError::InvalidName(e.to_string()))?;
+        let expected_size = std::mem::size_of::<FractalRingHeader>() + FRACTAL_SEEDS_CAPACITY * std::mem::size_of::<HolographicSeedBinary>();
+
+        unsafe {
+            let fd = libc::shm_open(c_name.as_ptr(), libc::O_RDONLY, 0);
+            if fd == -1 {
+                return Err(SentinelBridgeError::ShmOpen(format!("{}: errno={}", name, std::io::Error::last_os_error())));
+            }
+
+            let mut stat: libc::stat = std::mem::zeroed();
+            if libc::fstat(fd, &mut stat) == -1 {
+                libc::close(fd);
+                return Err(SentinelBridgeError::Io(std::io::Error::last_os_error()));
+            }
+
+            let actual_size = stat.st_size as usize;
+            if actual_size < expected_size {
+                libc::close(fd);
+                return Err(SentinelBridgeError::BufferTooSmall {
+                    shm_size: actual_size,
+                    expected: FRACTAL_SEEDS_CAPACITY,
+                    required: expected_size,
+                });
+            }
+
+            let ptr = libc::mmap(
+                ptr::null_mut(),
+                actual_size,
+                libc::PROT_READ,
+                libc::MAP_SHARED,
+                fd,
+                0,
+            );
+
+            if ptr == libc::MAP_FAILED {
+                libc::close(fd);
+                return Err(SentinelBridgeError::Mmap(format!("{}: errno={}", name, std::io::Error::last_os_error())));
+            }
+
+            Ok(Self {
+                name: name.to_string(),
+                shm_size: actual_size,
+                ptr: ptr as *mut u8,
+                fd,
+                last_tail: 0,
+            })
+        }
+    }
+
+    /// Lee semillas nuevas pendientes desde el ring buffer hacia un vector.
+    pub fn poll_new_seeds(&mut self, max_seeds: usize) -> Vec<HolographicSeedBinary> {
+        if self.ptr.is_null() { return Vec::new(); }
+
+        let header = unsafe { &*(self.ptr as *const FractalRingHeader) };
+        let head = header.head.load(Ordering::Acquire);
+        let tail = self.last_tail;
+
+        if head <= tail { return Vec::new(); }
+
+        let available = (head - tail) as usize;
+        let count = available.min(max_seeds).min(FRACTAL_SEEDS_CAPACITY);
+        let mut out = Vec::with_capacity(count);
+
+        let seeds_base = unsafe { self.ptr.add(std::mem::size_of::<FractalRingHeader>()) as *const HolographicSeedBinary };
+
+        for i in 0..count {
+            let slot = ((tail + i as u64) % FRACTAL_SEEDS_CAPACITY as u64) as usize;
+            let seed = unsafe { *seeds_base.add(slot) };
+            if seed.is_valid_crc() && seed.is_valid_cubic() {
+                out.push(seed);
+            }
+        }
+
+        self.last_tail = tail + count as u64;
+        out
+    }
+}
+
+impl Drop for SentinelFractalBridge {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.ptr.is_null() && self.ptr as *mut libc::c_void != libc::MAP_FAILED {
+                libc::munmap(self.ptr as *mut libc::c_void, self.shm_size);
+                self.ptr = ptr::null_mut();
+            }
+            if self.fd != -1 {
+                libc::close(self.fd);
+                self.fd = -1;
+            }
+        }
+    }
+}
 
 /// SPA tal cual lo escribe sentinel — `#[repr(C)]` explícito para garantizar
 /// el contrato cross-process. Layout: 5 × i64 little-endian nativo = 40 bytes.
@@ -337,5 +470,16 @@ mod tests {
         let projected = bridge.refresh_into_lattice(&mut lattice);
         assert_eq!(projected, 0);
         assert_eq!(bridge.node_count(), 0);
+    }
+
+    #[test]
+    fn fractal_ring_header_is_64_bytes() {
+        assert_eq!(std::mem::size_of::<FractalRingHeader>(), 64);
+    }
+
+    #[test]
+    fn open_nonexistent_fractal_shm_returns_error() {
+        let result = SentinelFractalBridge::open_named("/mycnet_test_fractal_none_982347");
+        assert!(matches!(result, Err(SentinelBridgeError::ShmOpen(_))));
     }
 }

@@ -23,3 +23,4 @@ target/
 # Added by code-review-graph
 .code-review-graph/
 .claude/settings.json.bak.*
+.omo/

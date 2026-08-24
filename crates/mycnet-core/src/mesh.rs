@@ -61,7 +61,7 @@ pub struct MeshState {
 /// Parsea la salida de `batctl n` (neighbors).
 ///
 /// Formato típico:
-/// ```
+/// ```text
 /// [B.A.T.M.A.N. adv 2023.3, MainIF/MAC: eth1/aa:bb:cc:dd:ee:ff (bat0 BATMAN_IV)]
 /// Neighbor         last-seen Quali Iface
 /// aa:bb:cc:dd:00:01    0.200s  250 eth1

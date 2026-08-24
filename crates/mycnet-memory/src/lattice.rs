@@ -86,6 +86,21 @@ impl Coord {
     pub fn hex_region(self) -> u8 {
         ((self.q.rem_euclid(3) * 2 + self.r.rem_euclid(2)) % 6) as u8
     }
+
+    /// Retorna las coordenadas cúbicas (q, r, s) con la invariante q + r + s == 0.
+    pub fn to_cubic(self) -> (i32, i32, i32) {
+        (self.q, self.r, -self.q - self.r)
+    }
+
+    /// Construye una coordenada axial a partir de coordenadas cúbicas (q, r, s).
+    /// Retorna `None` si se viola la invariante espacial q + r + s == 0.
+    pub fn from_cubic(q: i32, r: i32, s: i32) -> Option<Self> {
+        if q + r + s == 0 {
+            Some(Self { q, r })
+        } else {
+            None
+        }
+    }
 }
 
 /// Paso de difusión — resultado de un tick del lattice.
@@ -194,6 +209,32 @@ impl LiquidLattice {
             }
         }
         out
+    }
+
+    /// Inyecta una semilla fractal binaria (32B) directamente en el nodo hexagonal correspondiente.
+    pub fn inject_fractal_seed(&mut self, seed: &crate::holographic_sync::HolographicSeedBinary) -> Result<Coord, &'static str> {
+        if !seed.is_valid_crc() {
+            return Err("Checksum CRC16 inválido en la semilla fractal");
+        }
+        let coord = seed.to_coord().ok_or("Invariante espacial cúbica violada (q+r+s != 0)")?;
+        
+        let node = self.nodes.get_mut(&coord).ok_or("Coordenada fuera de los límites del lattice")?;
+        if node.is_closed() {
+            return Err("Sector hexagonal cerrado por coherencia");
+        }
+
+        let mut buf = [0u8; 6];
+        buf[0..4].copy_from_slice(&seed.token_id.to_le_bytes());
+        buf[4] = seed.phase_sector;
+        buf[5] = seed.yhwh_pulse;
+
+        node.data = buf;
+        node.amplitude = SPA::from_raw(seed.amplitude_s60);
+        node.phase_sector = seed.phase_sector;
+        node.set_occupied(true);
+        node.set_dirty(true);
+
+        Ok(coord)
     }
 
     /// Un tick de difusión (EXP-009 physics, snapshot atómico).
@@ -419,5 +460,19 @@ mod tests {
         let recovered = l.retrieve(start, data.len());
         assert_eq!(&recovered[..data.len().min(recovered.len())],
                    &data[..data.len().min(recovered.len())]);
+    }
+
+    #[test]
+    fn inject_fractal_seed_into_lattice_and_verify() {
+        use crate::holographic_sync::HolographicSeedBinary;
+        let mut l = LiquidLattice::new(3);
+        let seed = HolographicSeedBinary::from_lfm(999, 1, 1, 15);
+        let coord = l.inject_fractal_seed(&seed).expect("Inyección falló");
+        assert_eq!(coord, Coord { q: 1, r: 1 });
+
+        let node = l.nodes.get(&coord).expect("Nodo no encontrado");
+        assert!(node.is_occupied());
+        assert_eq!(node.amplitude.to_raw(), seed.amplitude_s60);
+        assert_eq!(node.phase_sector, 15);
     }
 }
