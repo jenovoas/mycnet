@@ -63,6 +63,7 @@ pub struct MycNode {
 pub struct ADM {
     pub nodes:    HashMap<AxialCoord, MycNode>,
     /// Salto axiomático de fase = 17
+    #[allow(dead_code)]
     step_key:     SPA,
     /// Número de ticks ejecutados
     pub tick_count: u64,

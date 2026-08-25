@@ -55,6 +55,7 @@ const _: () = assert!(
 
 /// Handle al segmento SHM de semillas fractales en modo lector.
 pub struct SentinelFractalBridge {
+    #[allow(dead_code)]
     name: String,
     shm_size: usize,
     ptr: *mut u8,
@@ -228,6 +229,7 @@ pub enum SentinelBridgeError {
 /// NO crea el segmento — espera que `sentinel-cortex` lo haya creado.
 /// Sigue vivo mientras el handle no se dropee. Drop libera mmap+fd.
 pub struct SentinelBridge {
+    #[allow(dead_code)]
     name: String,
     shm_size: usize,
     ptr: *mut u8,
