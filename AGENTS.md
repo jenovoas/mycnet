@@ -1,5 +1,10 @@
 # ARQUITECTURA Y REGLAS DE DESARROLLO (MYCNET / PROTOCOLO YATRA)
 
+> **Infraestructura 2026-08-26:** `fenix` es desarrollo/compilación y
+> `dns1.pinguinoseguro.cl`; `kingu` es producción contenerizada con Traefik y
+> `dns2.pinguinoseguro.cl`. No asumir que Compose o memorias antiguas describen
+> el estado activo. Verificar antes de desplegar: `/home/jnovoas/proyectos/sysdocs/02-topologia-y-metodologia-transicion-2026-08-26.md`.
+
 > **LECTURA OBLIGATORIA ANTES DE EMITIR JUICIOS SOBRE EL PROYECTO:**
 > [`sentinel-scientific-foundation.md`](file:///home/jnovoas/.config/Code/User/workspaceStorage/7c63ffead990815376933d02c94d88c9/GitHub.copilot-chat/memory-tool/memories/repo/sentinel-scientific-foundation.md)
 >
