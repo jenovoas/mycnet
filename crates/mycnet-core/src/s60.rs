@@ -162,4 +162,20 @@ mod tests {
         assert_eq!(r.components[0], 1);
         assert_eq!(r.components[1], 0);
     }
+
+    #[test]
+    fn div_safe_by_zero_returns_error() {
+        let a = SPA::one();
+        let b = SPA::zero();
+        let r = a.div_safe(b);
+        assert_eq!(r, Err(SPAError::DivisionByZero));
+    }
+
+    #[test]
+    #[should_panic(expected = "SPA División por cero")]
+    fn div_by_zero_panics() {
+        let a = SPA::one();
+        let b = SPA::zero();
+        let _ = a / b;
+    }
 }
