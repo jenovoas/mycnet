@@ -1,13 +1,11 @@
 # ARQUITECTURA Y REGLAS DE DESARROLLO (MYCNET / PROTOCOLO YATRA)
 
-> **Infraestructura 2026-08-26:** `fenix` es desarrollo/compilación y
-> `dns1.pinguinoseguro.cl`; `kingu` es producción contenerizada con Traefik y
-> `dns2.pinguinoseguro.cl`. No asumir que Compose o memorias antiguas describen
-> el estado activo. Verificar antes de desplegar: `/home/jnovoas/proyectos/sysdocs/02-topologia-y-metodologia-transicion-2026-08-26.md`.
-
-> **LECTURA OBLIGATORIA ANTES DE EMITIR JUICIOS SOBRE EL PROYECTO:**
-> [`sentinel-scientific-foundation.md`](file:///home/jnovoas/.config/Code/User/workspaceStorage/7c63ffead990815376933d02c94d88c9/GitHub.copilot-chat/memory-tool/memories/repo/sentinel-scientific-foundation.md)
+> **IDIOMA OBLIGATORIO (PENSAMIENTO Y SALIDA).** Está TERMINANTEMENTE PROHIBIDO el uso del inglés en el razonamiento interno (`thinking`) y en las respuestas visibles. El usuario audita directamente los bloques de pensamiento. Todo agente o IA DEBE pensar, razonar y responder 100% en español. Solo se permiten en inglés identificadores de sintaxis o nombres exactos de librerías cuando no haya traducción.
 >
+> **REPOSITORIO HERMANO SENTINEL & NODO FENIX:** MycNet se acopla directamente al core de Sentinel (`/home/jnovoas/proyectos/sentinel`, rama `alpine_fenix`) sobre el servidor Fenix (Alpine Linux, OpenRC).
+> El enlace de memoria compartida *zero-copy* opera sobre `/dev/shm/me60os_lattice` y el ring buffer de semillas `/dev/shm/me60os_fractal_seeds` expuesto por `crates/mycnet-memory/src/sentinel_bridge.rs`.
+>
+> **LECTURA OBLIGATORIA:** Ver `docs/02_ciencia_y_quantum/research/base60_mathematics.md` y `docs/02_ciencia_y_quantum/research/TesisResonancia.md` en el repositorio Sentinel.
 > MycNet **NO es misticismo ni maquetas alucinadas**. Es **ciencia exacta**.
 >
 > La base decimal no es defectuosa — es solo **una décima parte de la expresión
