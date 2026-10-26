@@ -7,6 +7,7 @@
 //! red mesh (WireGuard / VXLAN / batman-adv) hacia todos los peers configurados.
 
 use std::net::SocketAddr;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::time::{interval, Duration};
@@ -71,8 +72,15 @@ pub async fn start_mesh_udp(
                 let bytes = packet.to_bytes();
 
                 for peer in &peers {
-                    if let Err(e) = send_socket.send_to(&bytes, peer).await {
-                        debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
+                    match send_socket.send_to(&bytes, peer).await {
+                        Ok(_) => {
+                            send_state
+                                .fractal_packets_sent
+                                .fetch_add(1, Ordering::Relaxed);
+                        }
+                        Err(e) => {
+                            debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
+                        }
                     }
                 }
             }
@@ -114,5 +122,9 @@ mod tests {
         let coord = state.ingest_remote_seed(received_packet.seed).await.unwrap();
         assert_eq!(coord.q, 0);
         assert_eq!(coord.r, 0);
+        assert_eq!(
+            state.fractal_seeds_ingested.load(Ordering::Relaxed),
+            1
+        );
     }
 }

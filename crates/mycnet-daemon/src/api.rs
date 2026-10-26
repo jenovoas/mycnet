@@ -9,7 +9,6 @@
 //!   GET  /api/v1/adm      — estado interno del ADM
 //!   WS   /api/v1/stream   — telemetría en tiempo real
 
-use std::sync::Arc;
 use axum::{
     Router,
     routing::get,
@@ -18,6 +17,8 @@ use axum::{
     response::{Json, IntoResponse},
 };
 use serde_json::{json, Value};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::info;
 
@@ -33,12 +34,21 @@ pub fn router(state: Arc<AppState>) -> Router {
 }
 
 async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
-    let adm = state.adm.lock().await;
+    let (tick, nodes) = {
+        let adm = state.adm.lock().await;
+        (adm.tick_count, adm.nodes.len())
+    };
+    let fractal_source_connected = state.fractal_bridge.lock().await.is_some();
+
     Json(json!({
-        "status":  "OK",
-        "tick":    adm.tick_count,
-        "nodes":   adm.nodes.len(),
-        "phase":   mycnet_core::yhwh::YhwhPhase::current().name(),
+        "status": "OK",
+        "tick": tick,
+        "nodes": nodes,
+        "phase": mycnet_core::yhwh::YhwhPhase::current().name(),
+        "fractal_source_connected": fractal_source_connected,
+        "fractal_packet_bytes": std::mem::size_of::<mycnet_core::mesh::FractalMeshPacket>(),
+        "fractal_packets_sent": state.fractal_packets_sent.load(Ordering::Relaxed),
+        "fractal_seeds_ingested": state.fractal_seeds_ingested.load(Ordering::Relaxed),
     }))
 }
 
