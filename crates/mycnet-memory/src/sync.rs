@@ -22,12 +22,12 @@
 //!
 //! Referencia: telemetria_predictiva.md, buffer_system.rs, EXP-009
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use mycnet_core::s60::SPA;
 use crate::lattice::Coord;
 use crate::phase_gate::DiffusionStrength;
+use mycnet_core::s60::SPA;
 
 /// Paquete de frontera enviado entre satélites vía batman-adv UDP.
 ///
@@ -36,19 +36,19 @@ use crate::phase_gate::DiffusionStrength;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoundaryPacket {
     /// ID del satélite emisor
-    pub satellite_id:  u8,
+    pub satellite_id: u8,
     /// Tick del Crystal Clock en el que se capturó el estado
-    pub crystal_tick:  u64,
+    pub crystal_tick: u64,
     /// TQ del enlace batman-adv hacia el receptor (0-255)
-    pub link_tq:       u8,
+    pub link_tq: u8,
     /// Nodos de frontera: (q, r, amplitude_raw, phase_sector)
     pub boundary_nodes: Vec<BoundaryNode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoundaryNode {
-    pub q:            i32,
-    pub r:            i32,
+    pub q: i32,
+    pub r: i32,
     pub amplitude_raw: i64,
     pub phase_sector: u8,
 }
@@ -56,16 +56,16 @@ pub struct BoundaryNode {
 /// Gestor de sincronización de un satélite.
 pub struct SatelliteSync {
     /// ID de este satélite
-    pub local_id:      u8,
+    pub local_id: u8,
     /// TQ de cada satélite vecino (MAC → TQ)
-    neighbor_tq:       HashMap<String, u8>,
+    neighbor_tq: HashMap<String, u8>,
     /// Últimos paquetes de frontera recibidos por vecino
-    received_borders:  HashMap<u8, BoundaryPacket>,
+    received_borders: HashMap<u8, BoundaryPacket>,
     /// Ring buffer para paquetes entrantes (lock-free SPSC)
     /// Tamaño 3600 = 60² (alineado a SPA harmónico, como buffer_system.rs)
-    inbound_ring:      Vec<Option<BoundaryPacket>>,
-    ring_head:         usize,
-    ring_tail:         usize,
+    inbound_ring: Vec<Option<BoundaryPacket>>,
+    ring_head: usize,
+    ring_tail: usize,
 }
 
 const RING_SIZE: usize = 3600; // 60² — harmónico SPA
@@ -74,11 +74,11 @@ impl SatelliteSync {
     pub fn new(local_id: u8) -> Self {
         Self {
             local_id,
-            neighbor_tq:      HashMap::new(),
+            neighbor_tq: HashMap::new(),
             received_borders: HashMap::new(),
-            inbound_ring:     vec![None; RING_SIZE],
-            ring_head:        0,
-            ring_tail:        0,
+            inbound_ring: vec![None; RING_SIZE],
+            ring_head: 0,
+            ring_tail: 0,
         }
     }
 
@@ -109,9 +109,7 @@ impl SatelliteSync {
                     let coord = Coord { q: bn.q, r: bn.r };
                     // Amplitud ponderada por TQ: alto TQ = máxima energía recibida
                     let weight = pkt.link_tq as i64;
-                    let amp = SPA::from_raw(
-                        (bn.amplitude_raw * weight) / 255
-                    );
+                    let amp = SPA::from_raw((bn.amplitude_raw * weight) / 255);
                     result.push((coord, amp, coupling));
                 }
                 self.received_borders.insert(pkt.satellite_id, pkt);
@@ -132,17 +130,20 @@ impl SatelliteSync {
     ) -> BoundaryPacket {
         let tq = *self.neighbor_tq.get(neighbor_mac).unwrap_or(&128);
 
-        let boundary_nodes = nodes.iter().map(|(c, amp, ps)| BoundaryNode {
-            q:             c.q,
-            r:             c.r,
-            amplitude_raw: amp.to_raw(),
-            phase_sector:  *ps,
-        }).collect();
+        let boundary_nodes = nodes
+            .iter()
+            .map(|(c, amp, ps)| BoundaryNode {
+                q: c.q,
+                r: c.r,
+                amplitude_raw: amp.to_raw(),
+                phase_sector: *ps,
+            })
+            .collect();
 
         BoundaryPacket {
-            satellite_id:   self.local_id,
-            crystal_tick:   tick,
-            link_tq:        tq,
+            satellite_id: self.local_id,
+            crystal_tick: tick,
+            link_tq: tq,
             boundary_nodes,
         }
     }
@@ -157,7 +158,7 @@ impl SatelliteSync {
         match tq {
             200..=255 => DiffusionStrength::High,
             100..=199 => DiffusionStrength::Medium,
-            _         => DiffusionStrength::Low,
+            _ => DiffusionStrength::Low,
         }
     }
 

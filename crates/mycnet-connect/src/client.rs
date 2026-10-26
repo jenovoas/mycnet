@@ -3,10 +3,10 @@
 // Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # MycNetClient — Cliente HTTP + WebSocket para el daemon MycNet.
 
-use std::sync::Arc;
-use anyhow::{Result, Context};
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use anyhow::{Context, Result};
 use futures_util::StreamExt;
+use std::sync::Arc;
+use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{info, warn};
 
 use crate::types::{MeshEvent, MeshSnapshot, NodeInfo};
@@ -24,7 +24,9 @@ impl MycNetClient {
     /// Crea un cliente apuntando al daemon.
     /// Por defecto el daemon escucha en `http://localhost:7474`.
     pub fn new(base_url: impl Into<String>) -> Self {
-        Self { base_url: base_url.into() }
+        Self {
+            base_url: base_url.into(),
+        }
     }
 
     /// Consulta el estado actual del mesh (HTTP GET).
@@ -39,11 +41,14 @@ impl MycNetClient {
         // Parsear respuesta a MeshSnapshot
         let v: serde_json::Value = serde_json::from_str(&body)?;
         Ok(MeshSnapshot {
-            tick:      v["tick"].as_u64().unwrap_or(0),
-            phase:     v["phase"].as_str().unwrap_or("unknown").to_string(),
-            coherence: v["coherence"].as_str().unwrap_or("S60[000;00,00,00,00]").to_string(),
-            nodes:     Vec::new(), // Simplificado; parsear nodes si necesario
-            ts_unix:   0,
+            tick: v["tick"].as_u64().unwrap_or(0),
+            phase: v["phase"].as_str().unwrap_or("unknown").to_string(),
+            coherence: v["coherence"]
+                .as_str()
+                .unwrap_or("S60[000;00,00,00,00]")
+                .to_string(),
+            nodes: Vec::new(), // Simplificado; parsear nodes si necesario
+            ts_unix: 0,
         })
     }
 
@@ -51,7 +56,8 @@ impl MycNetClient {
     ///
     /// Esta función no retorna hasta que la conexión se cierra.
     pub async fn connect<H: MycNetHandler>(self, handler: H) -> Result<()> {
-        let ws_url = self.base_url
+        let ws_url = self
+            .base_url
             .replace("http://", "ws://")
             .replace("https://", "wss://");
         let ws_url = format!("{}/api/v1/stream", ws_url);
@@ -70,25 +76,29 @@ impl MycNetClient {
             match msg {
                 Ok(Message::Text(text)) => {
                     let v: serde_json::Value = match serde_json::from_str(&text) {
-                        Ok(v)  => v,
-                        Err(e) => { warn!("JSON inválido: {}", e); continue; }
+                        Ok(v) => v,
+                        Err(e) => {
+                            warn!("JSON inválido: {}", e);
+                            continue;
+                        }
                     };
 
                     let event = parse_event(&v);
 
                     // Detectar nodos nuevos/caídos
                     if let Some(nodes) = v["nodes"].as_array() {
-                        let current_ids: std::collections::HashSet<String> = nodes.iter()
+                        let current_ids: std::collections::HashSet<String> = nodes
+                            .iter()
                             .filter_map(|n| n["physical_id"].as_str().map(String::from))
                             .collect();
 
                         // Nuevos
                         for id in current_ids.difference(&known_nodes) {
                             handler.on_node_joined(NodeInfo {
-                                id:              id.clone(),
-                                bat_ip:          String::new(),
-                                coherence_s60:   v["coherence"].as_str().unwrap_or("").to_string(),
-                                neighbor_count:  0,
+                                id: id.clone(),
+                                bat_ip: String::new(),
+                                coherence_s60: v["coherence"].as_str().unwrap_or("").to_string(),
+                                neighbor_count: 0,
                             });
                         }
                         // Caídos
@@ -120,15 +130,15 @@ impl MycNetClient {
 fn parse_event(v: &serde_json::Value) -> MeshEvent {
     match v["type"].as_str() {
         Some("mesh_tick") => MeshEvent::Tick {
-            tick:      v["tick"].as_u64().unwrap_or(0),
-            phase:     v["phase"].as_str().unwrap_or("").to_string(),
+            tick: v["tick"].as_u64().unwrap_or(0),
+            phase: v["phase"].as_str().unwrap_or("").to_string(),
             coherence: v["coherence"].as_str().unwrap_or("").to_string(),
             neighbors: v["neighbors"].as_u64().unwrap_or(0) as usize,
         },
         Some("phase_change") => MeshEvent::PhaseChange {
             old_phase: v["old_phase"].as_str().unwrap_or("").to_string(),
             new_phase: v["new_phase"].as_str().unwrap_or("").to_string(),
-            factor:    v["factor"].as_u64().unwrap_or(0) as u8,
+            factor: v["factor"].as_u64().unwrap_or(0) as u8,
         },
         Some("low_coherence") => MeshEvent::LowCoherence {
             coherence: v["coherence"].as_str().unwrap_or("").to_string(),

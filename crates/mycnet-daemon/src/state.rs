@@ -39,11 +39,10 @@ impl AppState {
     pub fn new(tx: broadcast::Sender<String>) -> Self {
         let mut adm = ADM::new();
 
-        let hex_ring = [
-            (1, 0), (1, -1), (0, -1),
-            (-1, 0), (-1, 1), (0, 1),
-        ];
-        adm.add_node(0, 0);
+        // Red hexagonal de 6 nodos (topología estándar MycNet)
+        // Anillo hexagonal alrededor del origen
+        let hex_ring = [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
+        adm.add_node(0, 0); // nodo central
         for (q, r) in hex_ring {
             adm.add_node(q, r);
         }
@@ -53,8 +52,7 @@ impl AppState {
             .to_string_lossy()
             .to_string();
 
-        let bat_ip = std::env::var("MYCNET_BAT_IP")
-            .unwrap_or_else(|_| "10.10.0.11".into());
+        let bat_ip = std::env::var("MYCNET_BAT_IP").unwrap_or_else(|_| "10.10.0.11".into());
 
         let sentinel = match SentinelBridge::open() {
             Ok(bridge) => {
@@ -102,7 +100,7 @@ impl AppState {
         let phase = YhwhPhase::current();
 
         // Leer vecinos reales de batman-adv
-        let neighbors = match get_local_neighbors() {
+        let neighbors = match get_local_neighbors().await {
             Ok(n) => n,
             Err(e) => {
                 // Sin batctl disponible (dev mode): simular
@@ -119,10 +117,7 @@ impl AppState {
 
             // Inyectar TQ de cada vecino en su nodo ADM correspondiente
             for (i, neighbor) in neighbors.iter().enumerate() {
-                let ring_positions = [
-                    (1i64, 0i64), (1, -1), (0, -1),
-                    (-1, 0), (-1, 1), (0, 1),
-                ];
+                let ring_positions = [(1i64, 0i64), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
                 if let Some(&(q, r)) = ring_positions.get(i) {
                     adm.inject_tq(q, r, neighbor.tq);
                 }
@@ -186,14 +181,14 @@ impl AppState {
     }
 
     pub async fn get_mesh_state(&self) -> MeshState {
-        let neighbors = get_local_neighbors().unwrap_or_default();
+        let neighbors = get_local_neighbors().await.unwrap_or_default();
         let coherence = mesh_coherence(&neighbors);
 
         MeshState {
             nodes: vec![PhysicalNode {
-                id:              self.hostname.clone(),
-                bat_ip:          self.bat_ip.clone(),
-                mesh_coherence:  coherence,
+                id: self.hostname.clone(),
+                bat_ip: self.bat_ip.clone(),
+                mesh_coherence: coherence,
                 neighbors,
             }],
             ts_unix: std::time::SystemTime::now()
@@ -240,11 +235,11 @@ impl AppState {
 // Pequeña dependencia para hostname
 mod hostname {
     pub fn get() -> Result<std::ffi::OsString, ()> {
-        std::process::Command::new("hostname")
+        std::process::Command::new("/usr/bin/hostname")
             .output()
-            .map(|o| std::ffi::OsString::from(
-                String::from_utf8_lossy(&o.stdout).trim().to_string()
-            ))
+            .map(|o| {
+                std::ffi::OsString::from(String::from_utf8_lossy(&o.stdout).trim().to_string())
+            })
             .map_err(|_| ())
     }
 }

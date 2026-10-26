@@ -24,19 +24,29 @@ use serde::{Deserialize, Serialize};
 /// Cada región corresponde a una dirección axial del hexágono.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HexRegion {
-    R0 = 0, R1 = 1, R2 = 2,
-    R3 = 3, R4 = 4, R5 = 5,
+    R0 = 0,
+    R1 = 1,
+    R2 = 2,
+    R3 = 3,
+    R4 = 4,
+    R5 = 5,
 }
 
 impl HexRegion {
     pub fn from_tick(tick: u64) -> Self {
         match tick % 6 {
-            0 => HexRegion::R0, 1 => HexRegion::R1, 2 => HexRegion::R2,
-            3 => HexRegion::R3, 4 => HexRegion::R4, _ => HexRegion::R5,
+            0 => HexRegion::R0,
+            1 => HexRegion::R1,
+            2 => HexRegion::R2,
+            3 => HexRegion::R3,
+            4 => HexRegion::R4,
+            _ => HexRegion::R5,
         }
     }
 
-    pub fn as_u8(self) -> u8 { self as u8 }
+    pub fn as_u8(self) -> u8 {
+        self as u8
+    }
 }
 
 /// Controlador de fase para un satélite.
@@ -49,19 +59,23 @@ pub struct PhaseGate {
     /// Tick global sincronizado con Crystal Clock
     pub crystal_tick: u64,
     /// YHWH factor de la fase actual (controla intensidad de difusión)
-    pub yhwh_factor:  u8,
+    pub yhwh_factor: u8,
 }
 
 impl PhaseGate {
     pub fn new(satellite_id: u8) -> Self {
-        Self { satellite_id, crystal_tick: 0, yhwh_factor: 10 }
+        Self {
+            satellite_id,
+            crystal_tick: 0,
+            yhwh_factor: 10,
+        }
     }
 
     /// Avanza el tick y retorna la región activa.
     /// Llamar una vez por tick del Crystal Clock (41.77 Hz).
     pub fn advance(&mut self, new_tick: u64, yhwh_factor: u8) -> GateState {
         self.crystal_tick = new_tick;
-        self.yhwh_factor  = yhwh_factor;
+        self.yhwh_factor = yhwh_factor;
 
         let active_region = HexRegion::from_tick(new_tick);
 
@@ -73,8 +87,8 @@ impl PhaseGate {
         // Factor 10 (YOD) = máxima difusión, Factor 5 (HE) = media
         let diffusion_strength = match yhwh_factor {
             f if f >= 10 => DiffusionStrength::High,
-            f if f >= 6  => DiffusionStrength::Medium,
-            _            => DiffusionStrength::Low,
+            f if f >= 6 => DiffusionStrength::Medium,
+            _ => DiffusionStrength::Low,
         };
 
         GateState {
@@ -94,10 +108,10 @@ impl PhaseGate {
 /// Estado del gate en un tick determinado.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GateState {
-    pub active_region:     HexRegion,
+    pub active_region: HexRegion,
     pub can_write_boundary: bool,
     pub diffusion_strength: DiffusionStrength,
-    pub tick:              u64,
+    pub tick: u64,
 }
 
 /// Intensidad de difusión mapeada desde YHWH factor.
@@ -116,9 +130,9 @@ impl DiffusionStrength {
     /// Multiplica el TQ del enlace batman-adv.
     pub fn coupling_weight(self) -> u8 {
         match self {
-            DiffusionStrength::High   => 255,
+            DiffusionStrength::High => 255,
             DiffusionStrength::Medium => 160,
-            DiffusionStrength::Low    => 80,
+            DiffusionStrength::Low => 80,
         }
     }
 }

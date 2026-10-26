@@ -21,23 +21,23 @@ pub struct NodeInfo {
 /// Información de un vecino directo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeighborInfo {
-    pub mac:          String,
-    pub iface:        String,
+    pub mac: String,
+    pub iface: String,
     /// TQ crudo (0-255)
-    pub tq:           u8,
+    pub tq: u8,
     /// TQ en notación S60
-    pub tq_s60:       String,
+    pub tq_s60: String,
     pub last_seen_ms: u64,
 }
 
 /// Snapshot completo del estado del mesh.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshSnapshot {
-    pub tick:       u64,
-    pub phase:      String,
-    pub coherence:  String,
-    pub nodes:      Vec<NodeInfo>,
-    pub ts_unix:    u64,
+    pub tick: u64,
+    pub phase: String,
+    pub coherence: String,
+    pub nodes: Vec<NodeInfo>,
+    pub ts_unix: u64,
 }
 
 /// Eventos que el mesh puede emitir.
@@ -46,8 +46,8 @@ pub struct MeshSnapshot {
 pub enum MeshEvent {
     /// Tick del loop isocrono con estado actual
     Tick {
-        tick:      u64,
-        phase:     String,
+        tick: u64,
+        phase: String,
         coherence: String,
         neighbors: usize,
     },
@@ -55,7 +55,7 @@ pub enum MeshEvent {
     PhaseChange {
         old_phase: String,
         new_phase: String,
-        factor:    u8,
+        factor: u8,
     },
     /// Coherencia del mesh por debajo del umbral crítico
     LowCoherence {

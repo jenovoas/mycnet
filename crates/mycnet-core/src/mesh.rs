@@ -8,7 +8,6 @@
 //!
 //! Autor: Jaime Novoa — Yatra Protocol
 
-use std::process::Command;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use crate::s60::{SPA, HolographicSeedBinary};
@@ -113,8 +112,8 @@ pub struct PhysicalNode {
 /// Estado global de la red mesh.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshState {
-    pub nodes:    Vec<PhysicalNode>,
-    pub ts_unix:  u64,
+    pub nodes: Vec<PhysicalNode>,
+    pub ts_unix: u64,
 }
 
 /// Parsea la salida de `batctl n` (neighbors).
@@ -142,9 +141,9 @@ pub fn parse_batctl_neighbors(output: &str) -> Result<Vec<Neighbor>, MeshError> 
             let last_seen_ms = parse_last_seen(parts[1]);
 
             // TQ puede ser el tercer campo
-            let tq: u8 = parts[2].parse().map_err(|_| {
-                MeshError::ParseError(format!("TQ inválido: {}", parts[2]))
-            })?;
+            let tq: u8 = parts[2]
+                .parse()
+                .map_err(|_| MeshError::ParseError(format!("TQ inválido: {}", parts[2])))?;
 
             neighbors.push(Neighbor {
                 tq_s60: SPA::from_tq(tq),
@@ -160,10 +159,11 @@ pub fn parse_batctl_neighbors(output: &str) -> Result<Vec<Neighbor>, MeshError> 
 }
 
 /// Ejecuta `batctl n` y retorna los vecinos del nodo local.
-pub fn get_local_neighbors() -> Result<Vec<Neighbor>, MeshError> {
-    let output = Command::new("batctl")
+pub async fn get_local_neighbors() -> Result<Vec<Neighbor>, MeshError> {
+    let output = tokio::process::Command::new("/usr/sbin/batctl")
         .arg("n")
         .output()
+        .await
         .map_err(|e| MeshError::BatctlNotFound(e.to_string()))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -172,7 +172,9 @@ pub fn get_local_neighbors() -> Result<Vec<Neighbor>, MeshError> {
 
 /// Calcula la coherencia media de la red como SPA.
 pub fn mesh_coherence(neighbors: &[Neighbor]) -> SPA {
-    if neighbors.is_empty() { return SPA::zero(); }
+    if neighbors.is_empty() {
+        return SPA::zero();
+    }
     let sum: i64 = neighbors.iter().map(|n| n.tq_s60.to_raw()).sum();
     SPA::from_raw(sum / neighbors.len() as i64)
 }

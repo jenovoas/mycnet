@@ -25,14 +25,14 @@
 
 pub mod lattice;
 pub mod phase_gate;
-pub mod sync;
 pub mod storage;
+pub mod sync;
 pub mod sentinel_bridge;
 pub mod holographic_sync;
 
-pub use lattice::{LiquidLattice, LatticeNode, DiffusionStep};
-pub use phase_gate::{PhaseGate, HexRegion};
-pub use sync::{BoundaryPacket, SatelliteSync};
+pub use lattice::{DiffusionStep, LatticeNode, LiquidLattice};
+pub use phase_gate::{HexRegion, PhaseGate};
 pub use storage::{ResonantStore, StoreResult};
+pub use sync::{BoundaryPacket, SatelliteSync};
 pub use sentinel_bridge::{SentinelBridge, SentinelOscillator, SentinelSPA, SENTINEL_LATTICE_SHM_NAME};
 pub use holographic_sync::{HolographicSeed, HolographicSyncEngine};
