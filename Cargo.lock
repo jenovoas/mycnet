@@ -812,6 +812,7 @@ dependencies = [
  "anyhow",
  "axum",
  "mycnet-core",
+ "mycnet-memory",
  "serde",
  "serde_json",
  "tokio",
@@ -823,6 +824,7 @@ dependencies = [
 name = "mycnet-memory"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "mycnet-core",
  "serde",
  "serde_json",

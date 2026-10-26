@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # YHWH Modulation — Protocolo 10-5-6-5
 //!
 //! Modulación armónica para rebalanceo adaptativo de la red.

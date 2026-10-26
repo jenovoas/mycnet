@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # mycnet-connect — Módulo de Conexión para Programadores
 //!
 //! Este es el ÚNICO módulo que los programadores externos necesitan.
@@ -6,7 +9,7 @@
 //!
 //! ## Uso rápido
 //!
-//! ```rust
+//! ```rust,no_run
 //! use mycnet_connect::{MycNetClient, MycNetHandler, MeshEvent, NodeInfo};
 //!
 //! struct MyApp;

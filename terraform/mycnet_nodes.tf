@@ -1,5 +1,11 @@
 # terraform/mycnet_nodes.tf
-# MyCNet Batman-adv — 6 nodos hexagonales adicionales  
+# ═══════════════════════════════════════════════════════════════════════════
+# Infraestructura del Hackatón CubePath 2026 (vps23309.cubepath.net + 6 nodos).
+# Toda la infra CubePath fue eliminada post-hackatón.
+# Infraestructura actual: nodo único `fenix` en Azure (Brazil South).
+# Ver docs/INFRAESTRUCTURA.md — fuente de verdad viva.
+# ═══════════════════════════════════════════════════════════════════════════
+# MyCNet Batman-adv — 6 nodos hexagonales adicionales
 # Basado en ARCHITECTURE.md: topología hexagonal, batctl, S60, Mycelium Sync
 # Hackaton CubePath 2026 — Jaime Novoa
 

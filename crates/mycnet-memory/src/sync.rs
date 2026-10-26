@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # SatelliteSync — Sincronización de Fronteras entre Satélites
 //!
 //! Los satélites comparten sus nodos frontera a través de batman-adv.

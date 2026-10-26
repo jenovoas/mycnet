@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # mesh — Integración batman-adv real
 //!
 //! Lee el estado físico de la red desde `batctl` y lo expone
@@ -5,9 +8,68 @@
 //!
 //! Autor: Jaime Novoa — Yatra Protocol
 
-use crate::s60::SPA;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use crate::s60::{SPA, HolographicSeedBinary};
+
+pub const FRACTAL_PACKET_MAGIC: u32 = 0x4D594353; // "MYCS"
+pub const FRACTAL_PROTOCOL_VERSION: u16 = 1;
+
+/// Paquete de red para transporte de semillas fractales sobre malla (40 bytes exactos).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FractalMeshPacket {
+    pub magic: u32,
+    pub version: u16,
+    pub sequence_id: u16,
+    pub seed: HolographicSeedBinary,
+}
+
+const _: () = assert!(
+    std::mem::size_of::<FractalMeshPacket>() == 40,
+    "FractalMeshPacket debe medir exactamente 40 bytes según OpenSpec"
+);
+
+impl FractalMeshPacket {
+    pub fn new(sequence_id: u16, seed: HolographicSeedBinary) -> Self {
+        Self {
+            magic: FRACTAL_PACKET_MAGIC,
+            version: FRACTAL_PROTOCOL_VERSION,
+            sequence_id,
+            seed,
+        }
+    }
+
+    pub fn to_bytes(&self) -> [u8; 40] {
+        let mut bytes = [0u8; 40];
+        bytes[0..4].copy_from_slice(&self.magic.to_le_bytes());
+        bytes[4..6].copy_from_slice(&self.version.to_le_bytes());
+        bytes[6..8].copy_from_slice(&self.sequence_id.to_le_bytes());
+        bytes[8..40].copy_from_slice(&self.seed.to_bytes());
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8; 40]) -> Result<Self, &'static str> {
+        let magic = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        if magic != FRACTAL_PACKET_MAGIC {
+            return Err("Magic header inválido (no es un paquete MYCS)");
+        }
+        let version = u16::from_le_bytes(bytes[4..6].try_into().unwrap());
+        if version != FRACTAL_PROTOCOL_VERSION {
+            return Err("Versión de protocolo de semilla no soportada");
+        }
+        let sequence_id = u16::from_le_bytes(bytes[6..8].try_into().unwrap());
+        let seed_bytes: [u8; 32] = bytes[8..40].try_into().unwrap();
+        let seed = HolographicSeedBinary::from_bytes(&seed_bytes)?;
+
+        Ok(Self {
+            magic,
+            version,
+            sequence_id,
+            seed,
+        })
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum MeshError {
@@ -57,7 +119,7 @@ pub struct MeshState {
 /// Parsea la salida de `batctl n` (neighbors).
 ///
 /// Formato típico:
-/// ```
+/// ```text
 /// [B.A.T.M.A.N. adv 2023.3, MainIF/MAC: eth1/aa:bb:cc:dd:ee:ff (bat0 BATMAN_IV)]
 /// Neighbor         last-seen Quali Iface
 /// aa:bb:cc:dd:00:01    0.200s  250 eth1
@@ -118,9 +180,29 @@ pub fn mesh_coherence(neighbors: &[Neighbor]) -> SPA {
 }
 
 fn parse_last_seen(s: &str) -> u64 {
-    // "0.200s" → 200ms
+    // "0.200s" → 200 ms (S60 puro, sin f64).
+    // Formato batctl: d.ddd s — separar parte entera y decimal de segundos.
+    // 1 s = 1000 ms, 1 s = 60^2 = 3600 tercias S60.
+    // Conversion: ms = (int_secs * 1000 + frac_int * 1000 / 10^decimales)
+    // Scale-up primero, dividir al final para evitar truncamiento temprano.
     let s = s.trim_end_matches('s');
-    s.parse::<f64>().map(|v| (v * 1000.0) as u64).unwrap_or(0)
+    let (int_part, frac_part) = match s.split_once('.') {
+        Some((i, f)) => (i, f),
+        None => (s, ""),
+    };
+
+    let int_secs: u64 = int_part.parse().unwrap_or(0);
+
+    // Fracción decimal: 0.200 → 200 ms (×1000/10^3)
+    let frac_ms: u64 = if frac_part.is_empty() {
+        0
+    } else {
+        let frac_int: u64 = frac_part.parse().unwrap_or(0);
+        let denom: u64 = 10u64.pow(frac_part.len() as u32);
+        (frac_int * 1000) / denom
+    };
+
+    int_secs * 1000 + frac_ms
 }
 
 #[cfg(test)]
@@ -154,5 +236,30 @@ aa:00:00:00:00:04    1.000s   90 eth1
             last_seen_ms: 100,
         };
         assert_eq!(n.tq_s60, SPA::one());
+    }
+
+    #[test]
+    fn fractal_mesh_packet_wire_layout_40_bytes() {
+        assert_eq!(std::mem::size_of::<FractalMeshPacket>(), 40);
+    }
+
+    #[test]
+    fn fractal_mesh_packet_roundtrip_and_corruption_rejection() {
+        let seed = HolographicSeedBinary::from_lfm(123, 2, -2, 45);
+        let packet = FractalMeshPacket::new(1, seed);
+
+        let bytes = packet.to_bytes();
+        assert_eq!(bytes.len(), 40);
+
+        let decoded = FractalMeshPacket::from_bytes(&bytes).expect("Decodificación falló");
+        assert_eq!(packet, decoded);
+
+        let mut bad_magic = bytes;
+        bad_magic[0] = 0x00;
+        assert!(FractalMeshPacket::from_bytes(&bad_magic).is_err());
+
+        let mut bad_payload = bytes;
+        bad_payload[10] ^= 0xFF;
+        assert!(FractalMeshPacket::from_bytes(&bad_payload).is_err());
     }
 }

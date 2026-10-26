@@ -1,5 +1,7 @@
 # MYCNET_IMPLEMENTATION_PLAN.md
 
+> ⚠️ **NOTA DE INFRAESTRUCTURA** (2026-08-24): Las IPs y topología física descritas (`192.168.1.11–16`, `10.10.0.x`, 4-6 nodos) corresponden al entorno de validación original, ya retirado. La infra viva es el nodo único `fenix` (Azure, Brazil South) — ver [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md). Los criterios de éxito y fases del plan siguen vigentes como diseño objetivo.
+
 ## MycNet: Red Mesh Bio-Inspirada con Extensiones Sentinel (S60 + Modulación Armónica + Telemetría)
 
 **Fecha:** 2026-01-14  

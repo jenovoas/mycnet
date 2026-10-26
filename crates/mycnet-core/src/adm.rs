@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # ADM — Axial Diffusion Model
 //!
 //! Red resonante micelial hexagonal bio-inspirada.
@@ -78,6 +81,7 @@ pub struct MycNode {
 pub struct ADM {
     pub nodes: HashMap<AxialCoord, MycNode>,
     /// Salto axiomático de fase = 17
+    #[allow(dead_code)]
     step_key: SPA,
     /// Número de ticks ejecutados
     pub tick_count: u64,

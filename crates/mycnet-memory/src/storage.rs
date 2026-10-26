@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # ResonantStore — API pública de almacenamiento
 //!
 //! Interfaz de alto nivel para guardar/recuperar datos en el lattice.

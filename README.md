@@ -1,72 +1,81 @@
-# MycNet: Red Mesh Bio-Inspirada con Extensiones Sentinel
+# 🕸️ MycNet: Red Mesh Bio-Inspirada & Almacenamiento Resonante S60
 
-**MycNet** es una arquitectura de red distribuida y almacenamiento híbrido diseñada para operar bajo los principios de **Resonancia Armónica** y **Aritmética Sexagesimal (Base-60)**. Inspirada en la resiliencia y topología del micelio fúngico, busca minimizar la entropía computacional y eliminar el error de truncamiento inherente a los sistemas decimales tradicionales.
+**MycNet** es una arquitectura de red distribuida y almacenamiento híbrido bio-inspirado que opera bajo principios de **Resonancia Armónica**, **Compresión Fractal por Semilla** y **Aritmética Sexagesimal Base-60 ($S_{60}$)**, eliminando el error de truncamiento y la entropía de los sistemas decimales tradicionales.
 
-El proyecto se encuentra parcialmente implementado y validado en los servidores de prueba **fenix** y **sentinel-cubepath**.
-
----
-
-## 🔬 Fundamentos Técnicos: El Paradigma S60
-
-MycNet rechaza el uso de aritmética de punto flotante (`float`) debido a la generación de entropía (calor y bugs) por fracciones infinitas. En su lugar, utiliza **Enteros Escalados S60**:
-
-*   **Eficiencia Matemática**: El sistema opera en Base-60 (divisores: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60), eliminando la pérdida de información en cálculos de frecuencia y fase.
-*   **Aritmética de No-Colapso**: Implementación de la tabla de recíprocos **PAI-60** para divisiones en O(1) con precisión absoluta en el kernel.
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![Rust 2021+](https://img.shields.io/badge/rust-2021%2B-black.svg?logo=rust)](./crates/mycnet-core/)
+[![Core S60](https://img.shields.io/badge/Core-S60%20Fixed%20Point-purple)](./crates/mycnet-core/)
+[![WireGuard Mesh](https://img.shields.io/badge/Mesh-WireGuard%2010.88.0.0%2F24-emerald)](./)
 
 ---
 
-## 🔱 Componentes Core
+## 🏛️ Topología de Red y Enlace (Fenix $\leftrightarrow$ Kingu)
 
-### 1. ADM (Active Mycelium Design)
-Capa de transporte basada en el protocolo `batman-adv` (L2 Mesh), optimizada para:
-*   **Topología Adaptativa**: Enrutamiento dinámico que emula el crecimiento y reparación del micelio biológico.
-*   **Gestión de Congestión**: Uso de `fq_codel` y `cake` para mantener la latencia p95 bajo control, evitando el *bufferbloat*.
-*   **Control Hexagonal**: Segmentación de la red en hexágonos de coherencia SPA (Sentinel Phase Alignment).
+> **Interconexión:** MycNet opera transportando paquetes y estados de coherencia sobre el túnel cifrado **WireGuard (`10.88.0.0/24`)** uniendo Fenix (`10.88.0.1`, Cuenta Azure A) y Kingu (`10.88.0.2`, Cuenta Azure B).
 
-### 2. QHC Driver: Modulación YHWH
-Motor de sincronización temporal que sustituye el reloj maestro de cuarzo por un oscilador orgánico:
-*   **Patrón 10-5-6-5**: Modulación de frecuencia (Yod-He-Vav-He) para imitar ritmos naturales y compensar la deriva cuántica.
-*   **Frecuencia Base**: ~41.77 Hz (residente en el "Tick Sagrado" de 23,939,835 ns).
-
-### 3. Salto-17 y Segundo 68 (Quantum Leap)
-Mecanismo de purga entrópica basado en la firma matemática de **Plimpton 322 Fila 17**:
-*   **Reset de Fase**: Cada 17 ticks se ejecuta una corrección de fase localizada (~0.7ms).
-*   **Consistencia Global**: Cada 68 segundos (17x4) se fuerza un reinicio de fase a 0.00 para sincronizar el estado entre nodos distribuidos.
-
-### 4. Integración eBPF (Ring 0)
-Módulos LSM (`ai_guardian`) que operan en el nivel más profundo del kernel Linux:
-*   **Filtro de Resonancia**: Rechazo inmediato de paquetes o eventos con frecuencias irregulares (no 5-smooth).
-*   **Zero-Copy Bridge**: Transferencia de eventos vía Ring Buffer a userspace con latencia < 1µs.
-
----
-
-## 📦 Arquitectura de Almacenamiento
-Estrategia híbrida de storage distribuido:
-1.  **Fase Inicial (Validación)**: MinIO con Erasure Coding (EC 4+2).
-2.  **Fase Avanzada (Producción)**: Ceph con **Modulación QHC** para rebalanceo de datos (Yatra Protocol).
-
----
-
-## 🛠 Estructura del Repositorio
-
-```bash
-mycnet/
-├── scripts/             # Deployment (batman-adv, MinIO, Ceph)
-│   ├── mesh_setup.sh    # Configuración de malla por nodo
-│   └── s60_monitor.py   # Instrumentación de métricas S60
-├── target/              # Binarios Rust (mycnetd, cortex-bridge)
-├── docs/                # Investigación de frontera y especificaciones (Drafts)
-│   ├── TesisResonancia.md   # Validación estadística Base-60
-│   └── PAI60_ebpf.md        # Integración de tabla de recíprocos en kernel
-└── configs/             # Units de systemd y dashboards de Grafana
+```
+     ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
+     │      FENIX (Cuenta Azure A)      │    │      KINGU (Cuenta Azure B)      │
+     │      Túnel VPN: 10.88.0.1/24     │    │      Túnel VPN: 10.88.0.2/24     │
+     ├──────────────────────────────────┤    ├──────────────────────────────────┤
+     │ • Sentinel Cortex API (:8000)    │    │ • MycNet Daemon Kingu (:7474)    │
+     │ • SHM (/me60os_lattice, 67.951 N)│    │ • Sentinel Verifier Node         │
+     │ • MycNet Daemon Fenix (:7474)    │    │ • Traefik v3 + Podman Apps       │
+     └─────────────────┬────────────────┘    └────────────────┬─────────────────┘
+                       │                                      │
+                       └───────────► Túnel Cifrado ◄──────────┘
+                                  WireGuard (wg0)
+                                   10.88.0.0/24
 ```
 
 ---
 
-## 🚀 Estado de la Implementación
-*   **Validación de Red**: Mesh `bat0` operativo en nodos Fenix con latencia estable.
-*   **Sincronización**: Fase de pruebas del `yhwh_driver` para control de deriva en `sentinel-cubepath`.
-*   **Métricas**: Instrumentación básica de TQ (Transmit Quality) mapeada a formatos SPA.
+## 🔬 Los 3 Niveles de Memoria y Resonancia
+
+1. **Nivel 1: Simpatía Hexagonal:**
+   - Difusión de energía: cada nodo transfiere `flow = (diff * coupling_factor) / 6` a sus 6 vecinos. Ante la falla de un nodo, los vecinos rellenan y recargan su amplitud colectivamente.
+2. **Nivel 2: Bridge SHM Zero-Copy (`/me60os_lattice`):**
+   - Lectura atómica de 192 bytes por oscilador isocrónico (`#[repr(C)]`) directamente desde memoria compartida POSIX, sin serializaciones intermedias.
+3. **Nivel 3: Compresión Fractal por Semilla:**
+   - La malla no transporta datos pesados crudos: almacena la **semilla fractal** y la regla de propagación, reconstruyendo el estado holográfico mediante iteración determinista en destino.
 
 ---
 
+## 📦 Workspace Cargo (4 Crates)
+
+```
+mycnet/
+├── crates/
+│   ├── mycnet-core/       Tipos numéricos S60, vectores SPA, modulación YHWH, TQ a SPA
+│   ├── mycnet-connect/    Capa de transporte UDP/Mesh, serialización de frames binarios
+│   ├── mycnet-memory/     Retículo líquido hexagonal (LiquidLattice), bridge SHM con Sentinel
+│   └── mycnet-daemon/     Binario de producción 'mycnetd' (:7474), estado global y API REST
+├── scripts/
+│   └── benchmark_mycnet_transfer.py   Suite de benchmarking de ancho de banda y latencia
+└── config/                Configuraciones de monitoreo y reglas de red
+```
+
+---
+
+## ⚡ Benchmarking y Comandos Rápidos
+
+```bash
+# Compilar todo el workspace en release (genera target/release/mycnetd)
+cargo build --release
+
+# Ejecutar suite de pruebas unitarias (19/19 tests)
+cargo test
+
+# Iniciar daemon de malla MycNet en puerto :7474
+cargo run --release -p mycnet-daemon --bin mycnetd
+
+# Ejecutar suite de benchmarking de transferencia y latencia
+python3 scripts/benchmark_mycnet_transfer.py
+```
+
+---
+
+## 📄 Licencia
+
+Apache 2.0 con cláusula de uso soberano — Ver [LICENSE](./LICENSE).
+Desarrollado por **Jaime Novoa Sepúlveda** para **MycNet / SecurePenguin**.

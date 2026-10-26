@@ -1,3 +1,6 @@
+// Autor: Jaime Novoa Sepulveda — Todos los derechos reservados.
+// Licencia: Apache 2.0 + Cláusula No Comercial (ver LICENSE).
+// Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! # SPA — Sexagesimal Fixed-Point Arithmetic (Base-60)
 //!
 //! Motor matemático propietario. Protocolo Yatra Pure.
@@ -171,6 +174,160 @@ impl fmt::Display for SPA {
 impl fmt::Debug for SPA {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
+    }
+}
+
+/// Calcula el CRC16-CCITT (polinomio 0x1021, init 0xFFFF) sin punto flotante.
+pub fn compute_crc16(bytes: &[u8]) -> u16 {
+    let mut crc: u16 = 0xFFFF;
+    for &byte in bytes {
+        crc ^= (byte as u16) << 8;
+        for _ in 0..8 {
+            if (crc & 0x8000) != 0 {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    crc
+}
+
+/// Semilla Fractal Binaria de 32 bytes exactos (OpenSpec OPENSPEC-MYC-001).
+/// Layout FFI determinista little-endian #[repr(C)].
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HolographicSeedBinary {
+    /// ID del token o evento proyectado (0..4294967295)
+    pub token_id: u32,
+    /// Coordenada cúbica hexagonal q
+    pub coord_q: i32,
+    /// Coordenada cúbica hexagonal r
+    pub coord_r: i32,
+    /// Coordenada cúbica hexagonal s (Invariante espacial: q + r + s = 0)
+    pub coord_s: i32,
+    /// Amplitud de energía SPA en escala 60^4 = 12,960,000
+    pub amplitude_s60: i64,
+    /// Sector de fase armónica (0..59)
+    pub phase_sector: u8,
+    /// Pulso armónico YHWH (10-5-6-5)
+    pub yhwh_pulse: u8,
+    /// Flags (bit0=activo, bit1=snapped, bit2=bridge)
+    pub flags: u16,
+    /// Checksum CRC16-CCITT de los primeros 28 bytes
+    pub crc16: u16,
+    /// Relleno de alineación a 32 bytes exactos
+    pub reserved: [u8; 2],
+}
+
+const _: () = assert!(
+    std::mem::size_of::<HolographicSeedBinary>() == 32,
+    "HolographicSeedBinary debe medir exactamente 32 bytes según OPENSPEC-MYC-001"
+);
+
+impl HolographicSeedBinary {
+    pub fn new(
+        token_id: u32,
+        coord_q: i32,
+        coord_r: i32,
+        coord_s: i32,
+        amplitude_s60: i64,
+        phase_sector: u8,
+        yhwh_pulse: u8,
+        flags: u16,
+    ) -> Self {
+        let mut seed = Self {
+            token_id,
+            coord_q,
+            coord_r,
+            coord_s,
+            amplitude_s60,
+            phase_sector,
+            yhwh_pulse,
+            flags,
+            crc16: 0,
+            reserved: [0u8; 2],
+        };
+        seed.crc16 = seed.compute_checksum();
+        seed
+    }
+
+    pub fn from_lfm(token_id: u32, q: i32, r: i32, phase_sector: u8) -> Self {
+        let s = -q - r;
+        let normalized = (token_id % 3600) as i64;
+        let amp = normalized * SPA::SCALE_0;
+        Self::new(token_id, q, r, s, amp, phase_sector, 10, 0x01)
+    }
+
+    pub fn compute_checksum(&self) -> u16 {
+        let mut buffer = [0u8; 28];
+        buffer[0..4].copy_from_slice(&self.token_id.to_le_bytes());
+        buffer[4..8].copy_from_slice(&self.coord_q.to_le_bytes());
+        buffer[8..12].copy_from_slice(&self.coord_r.to_le_bytes());
+        buffer[12..16].copy_from_slice(&self.coord_s.to_le_bytes());
+        buffer[16..24].copy_from_slice(&self.amplitude_s60.to_le_bytes());
+        buffer[24] = self.phase_sector;
+        buffer[25] = self.yhwh_pulse;
+        buffer[26..28].copy_from_slice(&self.flags.to_le_bytes());
+        compute_crc16(&buffer)
+    }
+
+    pub fn is_valid_crc(&self) -> bool {
+        self.crc16 == self.compute_checksum()
+    }
+
+    pub fn is_valid_cubic(&self) -> bool {
+        self.coord_q + self.coord_r + self.coord_s == 0
+    }
+
+    pub fn to_bytes(&self) -> [u8; 32] {
+        let mut bytes = [0u8; 32];
+        bytes[0..4].copy_from_slice(&self.token_id.to_le_bytes());
+        bytes[4..8].copy_from_slice(&self.coord_q.to_le_bytes());
+        bytes[8..12].copy_from_slice(&self.coord_r.to_le_bytes());
+        bytes[12..16].copy_from_slice(&self.coord_s.to_le_bytes());
+        bytes[16..24].copy_from_slice(&self.amplitude_s60.to_le_bytes());
+        bytes[24] = self.phase_sector;
+        bytes[25] = self.yhwh_pulse;
+        bytes[26..28].copy_from_slice(&self.flags.to_le_bytes());
+        bytes[28..30].copy_from_slice(&self.crc16.to_le_bytes());
+        bytes[30..32].copy_from_slice(&self.reserved);
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8; 32]) -> Result<Self, &'static str> {
+        let token_id = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        let coord_q = i32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let coord_r = i32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let coord_s = i32::from_le_bytes(bytes[12..16].try_into().unwrap());
+        let amplitude_s60 = i64::from_le_bytes(bytes[16..24].try_into().unwrap());
+        let phase_sector = bytes[24];
+        let yhwh_pulse = bytes[25];
+        let flags = u16::from_le_bytes(bytes[26..28].try_into().unwrap());
+        let crc16 = u16::from_le_bytes(bytes[28..30].try_into().unwrap());
+        let reserved = [bytes[30], bytes[31]];
+
+        let seed = Self {
+            token_id,
+            coord_q,
+            coord_r,
+            coord_s,
+            amplitude_s60,
+            phase_sector,
+            yhwh_pulse,
+            flags,
+            crc16,
+            reserved,
+        };
+
+        if !seed.is_valid_crc() {
+            return Err("Checksum CRC16 inválido en semilla holográfica");
+        }
+        if !seed.is_valid_cubic() {
+            return Err("Violación de invariante cúbica hexagonal (q+r+s != 0)");
+        }
+
+        Ok(seed)
     }
 }
 
