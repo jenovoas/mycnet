@@ -47,8 +47,11 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
         "phase": mycnet_core::yhwh::YhwhPhase::current().name(),
         "fractal_source_connected": fractal_source_connected,
         "fractal_packet_bytes": std::mem::size_of::<mycnet_core::mesh::FractalMeshPacket>(),
+        "fractal_metrics_peer": state.metrics_peer.map(|peer| peer.to_string()),
         "fractal_packets_sent": state.fractal_packets_sent.load(Ordering::Relaxed),
+        "fractal_packets_sent_to_peer": state.fractal_packets_sent_to_peer.load(Ordering::Relaxed),
         "fractal_seeds_ingested": state.fractal_seeds_ingested.load(Ordering::Relaxed),
+        "fractal_seeds_ingested_from_peer": state.fractal_seeds_ingested_from_peer.load(Ordering::Relaxed),
     }))
 }
 

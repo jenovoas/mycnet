@@ -64,13 +64,17 @@ def fetch_seed_health(url):
 
     required_counters = (
         "fractal_packet_bytes",
-        "fractal_packets_sent",
-        "fractal_seeds_ingested",
+        "fractal_packets_sent_to_peer",
+        "fractal_seeds_ingested_from_peer",
     )
     if not isinstance(data, dict) or data.get("status") != "OK":
         raise ValueError("respuesta de salud inválida")
     if not isinstance(data.get("fractal_source_connected"), bool):
         raise ValueError("falta fractal_source_connected")
+    if data.get("fractal_metrics_peer") is not None and not isinstance(
+        data["fractal_metrics_peer"], str
+    ):
+        raise ValueError("fractal_metrics_peer inválido")
     for name in required_counters:
         value = data.get(name)
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
@@ -80,7 +84,9 @@ def fetch_seed_health(url):
     return data
 
 
-def benchmark_mycnet_seeds(source_url, receiver_url, window_seconds):
+def benchmark_mycnet_seeds(
+    source_url, receiver_url, source_peer, receiver_peer, window_seconds
+):
     print("\n▶ Semillas MycNet reales (SHM → UDP → ingestión)...")
     try:
         source_before = fetch_seed_health(source_url)
@@ -88,6 +94,13 @@ def benchmark_mycnet_seeds(source_url, receiver_url, window_seconds):
         if not source_before["fractal_source_connected"]:
             print("  Sin medición: el daemon emisor no tiene conectado el ring SHM de semillas.")
             return
+        if source_before["fractal_metrics_peer"] != source_peer:
+            print("  Sin medición: MYCNET_METRICS_PEER del emisor no coincide con el destino esperado.")
+            return
+        if receiver_before["fractal_metrics_peer"] != receiver_peer:
+            print("  Sin medición: MYCNET_METRICS_PEER del receptor no coincide con el origen esperado.")
+            return
+
         packet_bytes = source_before["fractal_packet_bytes"]
         if receiver_before["fractal_packet_bytes"] != packet_bytes:
             print("  Sin medición: los daemons reportan tamaños de paquete distintos.")
@@ -105,7 +118,12 @@ def benchmark_mycnet_seeds(source_url, receiver_url, window_seconds):
     if not source_after["fractal_source_connected"]:
         print("  Sin medición: se perdió la conexión del emisor con el ring SHM.")
         return
-
+    if (
+        source_after["fractal_metrics_peer"] != source_peer
+        or receiver_after["fractal_metrics_peer"] != receiver_peer
+    ):
+        print("  Sin medición: cambió el peer de métricas durante la ventana.")
+        return
     if (
         source_after["fractal_packet_bytes"] != packet_bytes
         or receiver_after["fractal_packet_bytes"] != packet_bytes
@@ -113,10 +131,10 @@ def benchmark_mycnet_seeds(source_url, receiver_url, window_seconds):
         print("  Sin medición: cambió el tamaño del paquete durante la ventana.")
         return
 
-    sent_before = source_before["fractal_packets_sent"]
-    sent_after = source_after["fractal_packets_sent"]
-    received_before = receiver_before["fractal_seeds_ingested"]
-    received_after = receiver_after["fractal_seeds_ingested"]
+    sent_before = source_before["fractal_packets_sent_to_peer"]
+    sent_after = source_after["fractal_packets_sent_to_peer"]
+    received_before = receiver_before["fractal_seeds_ingested_from_peer"]
+    received_after = receiver_after["fractal_seeds_ingested_from_peer"]
     if sent_after < sent_before or received_after < received_before:
         print("  Sin medición: un contador se reinició durante la ventana.")
         return
@@ -124,34 +142,38 @@ def benchmark_mycnet_seeds(source_url, receiver_url, window_seconds):
     sent = sent_after - sent_before
     received = received_after - received_before
     if sent == 0:
-        print("  Sin medición: no se transmitieron semillas reales desde SHM durante la ventana.")
+        print("  Sin medición: no se enviaron semillas reales al peer configurado durante la ventana.")
         return
 
-    print(f"  Paquetes UDP enviados por el emisor: {sent} ({sent * packet_bytes} bytes de paquete)")
-    print(f"  Semillas recibidas e inyectadas en destino: {received} ({received * packet_bytes} bytes de paquete)")
-    print("  Nota: el contador de destino es global; no correlaciona cada paquete con este emisor.")
+    print(f"  Paquetes UDP enviados a {source_peer}: {sent} ({sent * packet_bytes} bytes)")
+    print(f"  Semillas ingeridas desde {receiver_peer}: {received} ({received * packet_bytes} bytes)")
+    print("  Conteos filtrados por peer; no correlacionan cada sequence_id individual.")
     if received == 0:
-        print("  Recepción extremo a extremo no confirmada.")
+        print("  El receptor no ingirió semillas del peer configurado durante la ventana.")
     elif elapsed_ns > 0:
         rate_milli = received * 1_000_000_000_000 // elapsed_ns
-        print(f"  Tasa de ingestión observada: {rate_milli // 1000}.{rate_milli % 1000:03d} semillas/s")
+        print(f"  Tasa de ingestión desde ese peer: {rate_milli // 1000}.{rate_milli % 1000:03d} semillas/s")
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark de transporte MycNet")
     parser.add_argument("--mycnet-source-health", help="URL /health del daemon emisor")
     parser.add_argument("--mycnet-receiver-health", help="URL /health del daemon receptor")
+    parser.add_argument("--mycnet-source-peer", help="Peer UDP receptor esperado en MYCNET_METRICS_PEER del emisor")
+    parser.add_argument("--mycnet-receiver-peer", help="Peer UDP emisor esperado en MYCNET_METRICS_PEER del receptor")
     parser.add_argument("--mycnet-window-seconds", type=int, help="Duración entera de observación")
     args = parser.parse_args()
 
     mycnet_options = (
         args.mycnet_source_health,
         args.mycnet_receiver_health,
+        args.mycnet_source_peer,
+        args.mycnet_receiver_peer,
         args.mycnet_window_seconds,
     )
     if any(value is not None for value in mycnet_options) and not all(
         value is not None for value in mycnet_options
     ):
-        parser.error("los tres parámetros --mycnet-* son necesarios para medir semillas reales")
+        parser.error("los cinco parámetros --mycnet-* son necesarios para medir semillas por peer")
     if args.mycnet_window_seconds is not None and args.mycnet_window_seconds <= 0:
         parser.error("--mycnet-window-seconds debe ser mayor que cero")
 
@@ -196,7 +218,7 @@ def main():
         benchmark_mycnet_seeds(*mycnet_options)
     else:
         print("\n▶ Semillas MycNet reales...")
-        print("  Sin medición: configura las URL de ambos daemons y la ventana de observación.")
+        print("  Sin medición: configura ambos MYCNET_METRICS_PEER, las URL, los peers esperados y la ventana.")
 
     print("\n" + "=" * 75)
     print("  BENCHMARK FINALIZADO; revisa el resultado de cada canal")
