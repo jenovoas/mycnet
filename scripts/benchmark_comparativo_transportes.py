@@ -161,6 +161,11 @@ def main():
     parser.add_argument("--mycnet-source-peer", help="Peer UDP receptor esperado en MYCNET_METRICS_PEER del emisor")
     parser.add_argument("--mycnet-receiver-peer", help="Peer UDP emisor esperado en MYCNET_METRICS_PEER del receptor")
     parser.add_argument("--mycnet-window-seconds", type=int, help="Duración entera de observación")
+    parser.add_argument(
+        "--mycnet-only",
+        action="store_true",
+        help="Ejecutar solo la medición MycNet, sin generar tráfico TCP/SSH",
+    )
     args = parser.parse_args()
 
     mycnet_options = (
@@ -174,45 +179,53 @@ def main():
         value is not None for value in mycnet_options
     ):
         parser.error("los cinco parámetros --mycnet-* son necesarios para medir semillas por peer")
+    if args.mycnet_only and not all(value is not None for value in mycnet_options):
+        parser.error("--mycnet-only requiere los cinco parámetros --mycnet-*")
     if args.mycnet_window_seconds is not None and args.mycnet_window_seconds <= 0:
         parser.error("--mycnet-window-seconds debe ser mayor que cero")
 
     print("=" * 75)
-    print("  BENCHMARK COMPARATIVO MULTI-TRANSPORTE: FENIX <-> KINGU")
+    title = (
+        "BENCHMARK SOLO MycNet: FENIX <-> KINGU"
+        if args.mycnet_only
+        else "BENCHMARK COMPARATIVO MULTI-TRANSPORTE: FENIX <-> KINGU"
+    )
+    print(f"  {title}")
     print("=" * 75)
     print(f"  Nodo Origen:  Fenix (Azure A - 20.226.112.222 / 10.88.0.1)")
     print(f"  Nodo Destino: Kingu (Azure B - 68.211.176.190 / 10.88.0.2)")
     print("-" * 75)
-    
-    sizes = [10, 50]  # 10 MB y 50 MB
-    
-    for size in sizes:
-        print(f"\n▶ PROBANDO VOLUMEN MASIVO: {size} MB ({size * 1024} KB)")
-        print("-" * 75)
-        
-        # 1. TCP Directo por Internet Pública
-        print(f"  [1] TCP Directo Internet ({PUBLIC_IP}:{PORT})...", end="", flush=True)
-        t_tcp, mbps_tcp = send_tcp_stream(PUBLIC_IP, PORT, size)
-        if t_tcp:
-            print(f" ✓ {t_tcp:.3f} s  | Throughput: {mbps_tcp:.2f} MB/s (~{mbps_tcp*8:.2f} Mbps)")
-        else:
-            print(f" ✗ Falló: {mbps_tcp}")
-            
-        # 2. WireGuard VPN (wg0)
-        print(f"  [2] WireGuard VPN ({WG_IP}:{PORT})...", end="", flush=True)
-        t_wg, mbps_wg = send_tcp_stream(WG_IP, PORT, size)
-        if t_wg:
-            print(f"       ✓ {t_wg:.3f} s  | Throughput: {mbps_wg:.2f} MB/s (~{mbps_wg*8:.2f} Mbps)")
-        else:
-            print(f" ✗ Falló: {mbps_wg}")
-            
-        # 3. Túnel SSH Cifrado (Port 4222)
-        print(f"  [3] Túnel Cifrado SSH (:4222)...", end="", flush=True)
-        t_ssh, mbps_ssh = send_ssh_stream(size)
-        if t_ssh:
-            print(f"            ✓ {t_ssh:.3f} s  | Throughput: {mbps_ssh:.2f} MB/s (~{mbps_ssh*8:.2f} Mbps)")
-        else:
-            print(f" ✗ Falló: {mbps_ssh}")
+
+    if not args.mycnet_only:
+        sizes = [10, 50]  # 10 MB y 50 MB
+
+        for size in sizes:
+            print(f"\n▶ PROBANDO VOLUMEN MASIVO: {size} MB ({size * 1024} KB)")
+            print("-" * 75)
+
+            # 1. TCP Directo por Internet Pública
+            print(f"  [1] TCP Directo Internet ({PUBLIC_IP}:{PORT})...", end="", flush=True)
+            t_tcp, mbps_tcp = send_tcp_stream(PUBLIC_IP, PORT, size)
+            if t_tcp:
+                print(f" ✓ {t_tcp:.3f} s  | Throughput: {mbps_tcp:.2f} MB/s (~{mbps_tcp*8:.2f} Mbps)")
+            else:
+                print(f" ✗ Falló: {mbps_tcp}")
+
+            # 2. WireGuard VPN (wg0)
+            print(f"  [2] WireGuard VPN ({WG_IP}:{PORT})...", end="", flush=True)
+            t_wg, mbps_wg = send_tcp_stream(WG_IP, PORT, size)
+            if t_wg:
+                print(f"       ✓ {t_wg:.3f} s  | Throughput: {mbps_wg:.2f} MB/s (~{mbps_wg*8:.2f} Mbps)")
+            else:
+                print(f" ✗ Falló: {mbps_wg}")
+
+            # 3. Túnel SSH Cifrado (Port 4222)
+            print(f"  [3] Túnel Cifrado SSH (:4222)...", end="", flush=True)
+            t_ssh, mbps_ssh = send_ssh_stream(size)
+            if t_ssh:
+                print(f"            ✓ {t_ssh:.3f} s  | Throughput: {mbps_ssh:.2f} MB/s (~{mbps_ssh*8:.2f} Mbps)")
+            else:
+                print(f" ✗ Falló: {mbps_ssh}")
 
     if all(value is not None for value in mycnet_options):
         benchmark_mycnet_seeds(*mycnet_options)
