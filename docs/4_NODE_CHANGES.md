@@ -1,6 +1,6 @@
 # MycNet: Adaptación 4 Nodos (PCs)
 
-> ⚠️ **DOCUMENTO HISTÓRICO** (2026-08-24): Registro de la adaptación a 4 PCs, infra ya retirada. Infra actual: nodo único `fenix` en Azure — ver [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md).
+> ⚠️ **DOCUMENTO HISTÓRICO** (2026-08-24): Registro de una adaptación prevista para 4 PCs. No describe el inventario operativo. La prueba actual comprende cinco máquinas: `kingu`, `fenix`, `laptop` (`ifenix`), `hercules` (`ns1.pinguinoseguro.cl`) y `ocean` (`ns2.pinguinoseguro.cl`). Consulta [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md) para roles y estado observado.
 
 ## Cambios Realizados
 

@@ -1,6 +1,6 @@
 # MYCNET_IMPLEMENTATION_PLAN.md
 
-> ⚠️ **NOTA DE INFRAESTRUCTURA** (2026-08-24): Las IPs y topología física descritas (`192.168.1.11–16`, `10.10.0.x`, 4-6 nodos) corresponden al entorno de validación original, ya retirado. La infra viva es el nodo único `fenix` (Azure, Brazil South) — ver [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md). Los criterios de éxito y fases del plan siguen vigentes como diseño objetivo.
+> ⚠️ **NOTA DE INFRAESTRUCTURA**: Las IPs y topologías físicas descritas (`192.168.1.11–16`, `10.10.0.x`, 4-6 nodos) corresponden a escenarios de diseño anteriores. La prueba de fuego actual comprende `kingu`, `fenix`, `laptop` (`ifenix`), `hercules` y `ocean`; consulta [`INFRAESTRUCTURA.md`](INFRAESTRUCTURA.md) para roles y estado. Las fases de almacenamiento y mesh de este plan son objetivos pendientes, no despliegues confirmados.
 
 ## MycNet: Red Mesh Bio-Inspirada con Extensiones Sentinel (S60 + Modulación Armónica + Telemetría)
 
@@ -113,11 +113,11 @@ ping -c 5 10.10.0.12
 
 ---
 
-### **Fase 2 — Storage MinIO (2 días)**
+### **Fase 2 — Storage MinIO (2 días; diseño pendiente, no despliegue actual)**
 
 **Objetivo**: Cluster MinIO con EC 4+2
 
-**Deployment**:
+**Ejemplo histórico de despliegue** (nombres `n1`–`n6` ilustrativos; no corresponden al inventario actual de cinco máquinas):
 
 ```bash
 # En cada nodo (n1-n6):

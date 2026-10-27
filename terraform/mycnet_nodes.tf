@@ -2,7 +2,8 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Infraestructura del Hackatón CubePath 2026 (vps23309.cubepath.net + 6 nodos).
 # Toda la infra CubePath fue eliminada post-hackatón.
-# Infraestructura actual: nodo único `fenix` en Azure (Brazil South).
+# Inventario operativo actual: cinco máquinas; ver docs/INFRAESTRUCTURA.md.
+# Este archivo describe solamente la infraestructura histórica de CubePath y no debe ejecutarse.
 # Ver docs/INFRAESTRUCTURA.md — fuente de verdad viva.
 # ═══════════════════════════════════════════════════════════════════════════
 # MyCNet Batman-adv — 6 nodos hexagonales adicionales
@@ -150,5 +151,5 @@ output "batctl_verify_command" {
 }
 
 output "total_nodes" {
-  value = "1 primario (vps23309) + 6 nodos hexagonales = 7 nodos MyCNet activos"
+  value = "Diseño histórico CubePath: 1 primario + 6 nodos; no representa nodos MyCNet activos"
 }
