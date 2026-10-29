@@ -1,0 +1,6 @@
+node,mesh_ip,public_ip,public_key,listen_port_current,listen_port_persisted,direct_peer_edges,readiness
+fenix,10.88.0.1,64.176.28.233,uDRQoK+9glEHI5T7iAYgtoxbkJFr/knakPF+7+eMMUk=,51820,51820,kingu;hercules;ocean,vultr-cloud-firewall-unverified
+kingu,10.88.0.2,64.176.8.191,JGqXfzCF5ZinxMrLn0PwlxiSZE3Ej2+hSTPrrYxFmD8=,51820,51820,fenix;hercules;ocean,vultr-cloud-firewall-api-unavailable
+laptop,10.88.0.3,,bqLjeyeVIa65B1EvS+96iA428JZF0KwcdJkgg1nEelk=,39385,dynamic,none,nat-endpoint-not-stable
+hercules,10.88.0.4,35.222.197.225,tnNfAKn4PyqUeU3xJob2FOnt2mrZhFlyb/NCc8aPpgE=,51820,51820,kingu;fenix;ocean,gcp-host-rule-scoped-and-tested
+ocean,10.88.0.5,172.233.6.214,hlP8pjj/YAIsmh8UPpMxf+SBktCtSWs5feqeqCfa9x4=,51820,51820,kingu;fenix;hercules,linode-firewall-not-reported

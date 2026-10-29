@@ -1,0 +1,14 @@
+[Unit]
+Description=MycNet Batman-adv sobre VXLAN/WireGuard
+Wants=network-online.target
+After=network-online.target
+Before=mycnetd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/mycnet-batman.sh up
+ExecStop=/usr/local/sbin/mycnet-batman.sh down
+
+[Install]
+WantedBy=multi-user.target

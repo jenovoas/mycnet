@@ -1,0 +1,10 @@
+[Unit]
+Description=Actualiza la tabla Batman para MycNet cada segundo
+
+[Timer]
+OnBootSec=3s
+OnUnitActiveSec=1s
+AccuracySec=250ms
+
+[Install]
+WantedBy=timers.target

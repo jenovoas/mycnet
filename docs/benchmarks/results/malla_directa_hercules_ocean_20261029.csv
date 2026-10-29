@@ -1,0 +1,9 @@
+kind,path,source,source_provider,target,target_provider,direction,repeat,protocol,offered_mbps,throughput_mbps,loss_pct,jitter_ms,rtt_avg_ms,retransmits,seconds,error
+iperf3,wireguard,hercules,GCP,ocean,Linode,hercules->ocean,1,tcp,,118.874,,,,0,30,
+iperf3,wireguard,hercules,GCP,ocean,Linode,ocean->hercules,1,tcp,,160.985,,,,0,30,
+iperf3,wireguard,hercules,GCP,ocean,Linode,hercules->ocean,1,udp,20,19.727,0,0.185,,,10,
+iperf3,wireguard,hercules,GCP,ocean,Linode,ocean->hercules,1,udp,20,20.0,0,0.099,,,10,
+iperf3,bat0,hercules,GCP,ocean,Linode,hercules->ocean,1,tcp,,108.647,,,,0,30,
+iperf3,bat0,hercules,GCP,ocean,Linode,ocean->hercules,1,tcp,,159.272,,,,0,30,
+iperf3,bat0,hercules,GCP,ocean,Linode,hercules->ocean,1,udp,20,19.726,0,0.159,,,10,
+iperf3,bat0,hercules,GCP,ocean,Linode,ocean->hercules,1,udp,20,20.001,0,0.101,,,10,

@@ -1,6 +1,6 @@
 # Infraestructura actual — MyCNet
 
-> **Actualizado:** 2026-10-27. Inventario observado por SSH y servicios; los roles esperados proceden de la arquitectura indicada por el usuario. El estado remoto es una comprobación puntual.
+> **Actualizado:** 2026-10-29. Despliegue de `mycnetd` comprobado por SSH, systemd y API en las cinco máquinas; malla WireGuard directa validada entre los cuatro nodos cloud, con laptop como spoke NAT. El estado remoto es una comprobación puntual.
 
 ## Nodos y roles
 
@@ -8,13 +8,13 @@ La prueba de fuego comprende cinco máquinas físicas. Los nombres `ns1`/`ns2` s
 
 | Máquina | Acceso SSH comprobado | IP pública | IP WireGuard | Rol esperado | MyCNet comprobado |
 |---|---|---|---|---|---|
-| `hercules` | `ns1.pinguinoseguro.cl` | `35.222.197.225` | `10.88.0.4` | DNS público Hercules; nombre DNS interno `ns1.pinguinoseguro.cl` | **Activo**: servicio habilitado; API responde en `10.88.0.4:7474`; UDP configurado en `:4242`. |
-| `ocean` | `ns2.pinguinoseguro.cl` | `172.233.6.214` | `10.88.0.5` | DNS público Ocean; nombre DNS interno `ns2.pinguinoseguro.cl` | **Activo**: servicio habilitado; API responde en `10.88.0.5:7474`; UDP configurado en `:4242`. |
-| `kingu` | `kingu` / `kingu-vpn` | `64.176.8.191` | `10.88.0.2` | DNS interno adicional y frontend/proxy | **Activo**: servicio habilitado; API responde en `10.88.0.2:7474`; UDP configurado en `:4242`. |
-| `fenix` | Host local de esta sesión | `64.176.28.233` | `10.88.0.1` | Backend y DNS interno primario | **Activo**: servicio habilitado; `/health` responde HTTP 200; escucha en `10.88.0.1:7474`; UDP configurado en `:4242`. |
-| `laptop` (`ifenix`) | `laptop` / `ifenix` | No comprobada | `10.88.0.3` | Nodo de la prueba MyCNet | **Incompleto**: binario `~/.local/bin/mycnetd` no encontrado en la sesión remota; no hay unidad ni proceso activo. |
+| `hercules` | `ns1.pinguinoseguro.cl:4222` | `35.222.197.225` | `10.88.0.4` | DNS público Hercules; nombre DNS interno `ns1.pinguinoseguro.cl` | **Activo y habilitado**: hash compartido `43e1fcfd…56a24f6`; API `/health` HTTP 200; UDP escucha en `:4242`. |
+| `ocean` | `ns2.pinguinoseguro.cl:4222` | `172.233.6.214` | `10.88.0.5` | DNS público Ocean; nombre DNS interno `ns2.pinguinoseguro.cl` | **Activo y habilitado**: hash compartido `43e1fcfd…56a24f6`; API `/health` HTTP 200; UDP escucha en `:4242`. |
+| `kingu` | `kingu:4222` / `kingu-vpn` | `64.176.8.191` | `10.88.0.2` | DNS interno adicional y frontend/proxy | **Activo y habilitado**: hash compartido `43e1fcfd…56a24f6`; API `/health` HTTP 200; UDP escucha en `:4242`. |
+| `fenix` | Host local de esta sesión | `64.176.28.233` | `10.88.0.1` | Backend y DNS interno primario | **Activo y habilitado**: hash compartido `43e1fcfd…56a24f6`; API `/health` HTTP 200; UDP escucha en `:4242`. |
+| `laptop` (`ifenix`) | `10.88.0.3:22` | No comprobada | `10.88.0.3` | Nodo de la prueba MyCNet | **Activo y habilitado**: hash compartido `43e1fcfd…56a24f6`; API `/health` HTTP 200; UDP escucha en `:4242`. |
 
-Los destinos `ns1.pinguinoseguro.cl` y `ns2.pinguinoseguro.cl` resuelven a las IP públicas indicadas y sus máquinas reportan los hostnames `hercules` y `ocean`. Los nombres sueltos `hercules` y `ocean` no resuelven desde este entorno; usar sus FQDN para SSH. `laptop` e `ifenix` son alias de una misma máquina. Fenix es el host local de esta sesión (`hostname=fenix`, `10.88.0.1`); se inspeccionó directamente, sin SSH.
+Los destinos `ns1.pinguinoseguro.cl` y `ns2.pinguinoseguro.cl` resuelven a las IP públicas indicadas y sus máquinas reportan los hostnames `hercules` y `ocean`. Los nombres sueltos `hercules` y `ocean` no resuelven desde este entorno; usar sus FQDN para SSH. `laptop` e `ifenix` son alias de una misma máquina; SSH responde en el puerto 22 (no en 4222). Fenix es el host local de esta sesión (`hostname=fenix`, `10.88.0.1`); se inspeccionó directamente, sin SSH.
 
 ## DNS y enmascaramiento de servicios
 
@@ -28,34 +28,43 @@ Desde Kingu, los cuatro servidores DNS (`10.88.0.1`, `.2`, `.4` y `.5`) contesta
 
 ## MyCNet y topología
 
-Se comprobó `mycnetd` activo y habilitado en Fenix (`10.88.0.1`), Kingu (`10.88.0.2`), Hercules (`10.88.0.4`) y Ocean (`10.88.0.5`). Los cuatro endpoints `/health` responden HTTP 200. En los cuatro nodos, `/api/v1/mesh` devuelve únicamente el nodo local y `neighbors: []`; el valor `nodes: 7` del endpoint de salud no demuestra que haya siete nodos físicos conectados ni una malla funcional. Se observaron handshakes WireGuard recientes, pero `bat0` no existe en ninguno de los cuatro.
+`mycnetd` está activo y habilitado en las cinco máquinas; las cinco instalaciones comparten el hash `43e1fcfd553a5157a602d7b206702599d0426e186e93924f70fb2d40956a24f6`. El emisor UDP tiene cuatro peers configurados por nodo y escucha en `:4242`. El servicio de instantáneas `batctl` está instalado y la API reportó cuatro vecinos Batman por nodo tras su despliegue. La inspección inicial de WireGuard encontró hub-and-spoke con Kingu como tránsito obligatorio. El 2026-10-29 se agregaron peers directos y se validaron las seis aristas entre Fenix, Kingu, Hercules y Ocean; los peers de Kingu siguen instalados. La laptop (`.3`) continúa como spoke por NAT. Esta validación de transporte no demuestra por sí sola intercambio efectivo de semillas MyCNet.
 
-El 2026-10-27 se compiló `mycnetd` en release desde este checkout y se instaló/reinició secuencialmente en Fenix, Kingu, Hercules y Ocean. Los cuatro servicios quedaron activos; todos responden HTTP 200 en `/health` y tienen el mismo SHA-256 `43e1fcfd553a5157a602d7b206702599d0426e186e93924f70fb2d40956a24f6`. Se conservaron las versiones previas como `~/.local/bin/mycnetd.predeploy-20261027-*`. No se compiló en los nodos pequeños: Hercules y Ocean tienen aproximadamente 1 GiB de RAM; después del reinicio sus RSS eran aproximadamente 7,6 y 6,8 MiB, respectivamente.
+El 2026-10-29 se compiló `mycnetd` en release con Rust 1.99.1 desde este checkout y se desplegó secuencialmente en los cinco nodos. Los cinco servicios quedaron activos y habilitados, con `/health` HTTP 200. Se conservaron copias previas cuando existían; Fenix y Ocean no tenían binario instalado en la ruta esperada al iniciar esta operación. Hercules y Ocean arrancaron correctamente con menos de 1 GiB de RAM disponible.
 
-Los cuatro nodos carecen de `/dev/shm/me60os_lattice` y `/dev/shm/me60os_fractal_seeds`; los registros confirman ambos puentes Sentinel no disponibles y ejecución standalone. Según `poll_local_fractal_seeds()` en `crates/mycnet-daemon/src/state.rs`, sin el puente fractal cada sondeo devuelve una lista vacía; el emisor UDP no tiene semillas que difundir. Por ello el despliegue del daemon está sano, pero el transporte de semillas no quedó validado ni operativo en esta inspección.
+El estado de los puentes compartidos varía por nodo: Kingu y Hercules registraron ambos puentes Sentinel conectados al iniciar; Fenix, laptop y Ocean registraron ambos buffers SHM ausentes y operación standalone. Según `poll_local_fractal_seeds()` en `crates/mycnet-daemon/src/state.rs`, sin el puente fractal cada sondeo devuelve una lista vacía; el emisor UDP no tiene semillas que difundir. La malla Batman quedó formada después mediante VXLAN sobre WireGuard, pero el intercambio de semillas MycNet sigue pendiente de recuperar los buffers SHM ausentes.
 
 La configuración de peers leída en los servicios es:
 
 | Nodo | Peers configurados |
 |---|---|
-| Fenix (`.1`) | `.2`, `.4`, `.5` |
-| Kingu (`.2`) | `.1`, `.4`, `.5` |
-| Hercules (`.4`) | `.1`, `.2`, `.5` |
-| Ocean (`.5`) | `.1`, `.2`, `.4` |
+| Fenix (`.1`) | `.2`, `.3`, `.4`, `.5` |
+| Kingu (`.2`) | `.1`, `.3`, `.4`, `.5` |
+| laptop (`.3`) | `.1`, `.2`, `.4`, `.5` |
+| Hercules (`.4`) | `.1`, `.2`, `.3`, `.5` |
+| Ocean (`.5`) | `.1`, `.2`, `.3`, `.4` |
 
-Las cuatro unidades revisadas se configuran como peers mutuos, pero omiten `laptop` (`.3`). La respuesta vacía de vecinos en la API de Fenix indica que falta comprobar el intercambio de datos y la formación real de la malla.
+El 2026-10-29 se desplegó `batman-adv` en los cinco nodos. Cada pareja usa un VXLAN unicast con VNI propio sobre `wg0`; los diez túneles usan UDP 4789 dentro de WireGuard. `bat0` tiene `10.10.0.1`–`10.10.0.5/24` según el nodo y cuatro interfaces VXLAN activas por host. Fenix, Hercules y Ocean permiten UDP 4789 desde sus cuatro peers mediante reglas específicas; Kingu mantiene `wg0` en la zona `trusted`. Laptop no tiene un cortafuegos local activo; sus túneles VXLAN fijan las cuatro direcciones remotas y viajan dentro de WireGuard.
+
+La tabla `batctl n` informa cuatro vecinos directos por nodo y `batctl o` muestra sus rutas/TQ. Se corrigió el analizador Rust para unir vecinos directos con su TQ de la ruta preferida. Como `mycnetd` no necesita `CAP_NET_ADMIN`, un servicio aislado con solo esa capacidad captura `batctl n/o` una vez por segundo en `/run/mycnet/batctl-originators`; el daemon de usuario lee la instantánea y la API reporta cuatro vecinos. `bat_ip` ahora apunta a `10.10.0.x` también en laptop y Ocean.
+
+La formación de vecinos Batman y la conectividad IP de extremo a extremo por `bat0` quedaron comprobadas: se enviaron 10 pings por cada pareja dirigida entre los cinco nodos, con 0% de pérdida. El RTT observado fue de aproximadamente 0,25–185 ms. Las primeras fallas ocurrieron durante la convergencia/ resolución ARP inmediatamente después de crear las interfaces. No se modificaron reglas de firewall durante esta verificación.
 
 ### Criterio de cierre de la prueba de fuego
 
-- `mycnetd` instalado, habilitado y saludable en las cinco máquinas físicas; falta desplegarlo en `laptop`.
-- Peers configurados para los cinco nodos, incluida `laptop`, y comunicación UDP/API verificada entre cada par requerido.
+- `mycnetd` instalado, habilitado y saludable en las cinco máquinas físicas; **comprobado el 2026-10-29**.
+- Peers configurados para los cinco nodos, incluida `laptop`; cuatro vecinos Batman visibles por nodo. El intercambio UDP de semillas sigue pendiente de validar cuando existan buffers SHM con datos.
 - Camino de frontend en Kingu hacia PostgreSQL en Fenix ya observado; comprobar salud de la aplicación y las rutas de enmascaramiento de servicios.
 - DNS público e interno validado para las zonas y registros previstos desde redes externas e internas.
-- Puentes Sentinel probados independientemente. Los registros revisados anteriormente en Kingu advertían que sus buffers SHM no estaban disponibles; no asumir que Ring 0 de Sentinel activa los puentes de MyCNet.
+- Puentes Sentinel probados independientemente. En esta comprobación, Kingu y Hercules conectaron ambos buffers SHM; Fenix, laptop y Ocean no los tenían. No asumir que Ring 0 de Sentinel activa los puentes de MyCNet.
 
 ## Componentes de red y almacenamiento aún no verificados
 
-Se comprobó que `bat0` no existe en Fenix, Kingu, Hercules ni Ocean. No se confirmó VXLAN, MinIO ni Prometheus/Grafana. `docker-compose.yml` describe servicios, pero no constituye evidencia de despliegue.
+`bat0`, VXLAN y el descubrimiento Batman están desplegados y comprobados en las cinco instalaciones MycNet. MinIO y Prometheus/Grafana no se confirmaron. `docker-compose.yml` describe servicios, pero no constituye evidencia de despliegue.
+
+## Pruebas de rendimiento de red
+
+La metodología reproducible y el benchmark están en [`docs/benchmarks/METODOLOGIA_RED.md`](benchmarks/METODOLOGIA_RED.md) y [`scripts/benchmark_network_matrix.py`](../scripts/benchmark_network_matrix.py). Los resultados iniciales y su limitación de topología están en [`docs/benchmarks/RESULTADOS_20261029.md`](benchmarks/RESULTADOS_20261029.md); el traceroute, las retransmisiones y los bloqueos de puertos para preparar peers directos están en [`docs/benchmarks/DIAGNOSTICO_20261029.md`](benchmarks/DIAGNOSTICO_20261029.md). Los datos completos están en `docs/benchmarks/results/`.
 
 ## Infraestructura histórica
 

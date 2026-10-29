@@ -8,9 +8,10 @@
 //!
 //! Autor: Jaime Novoa — Yatra Protocol
 
+use crate::s60::{HolographicSeedBinary, SPA};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use thiserror::Error;
-use crate::s60::{SPA, HolographicSeedBinary};
 
 pub const FRACTAL_PACKET_MAGIC: u32 = 0x4D594353; // "MYCS"
 pub const FRACTAL_PROTOCOL_VERSION: u16 = 1;
@@ -81,7 +82,7 @@ pub enum MeshError {
     IoError(#[from] std::io::Error),
 }
 
-/// Vecino detectado por batman-adv (salida de `batctl n`).
+/// Vecino directo detectado por `batctl n`, con TQ de la ruta en `batctl o`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Neighbor {
     /// Dirección MAC del vecino
@@ -131,18 +132,13 @@ pub fn parse_batctl_neighbors(output: &str) -> Result<Vec<Neighbor>, MeshError> 
     for line in output.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
 
-        // Línea de datos: MAC  tiempo  TQ  iface
-        // MAC tiene formato xx:xx:xx:xx:xx:xx (17 chars)
-        if parts.len() >= 4 && parts[0].len() == 17 && parts[0].contains(':') {
+        // Formato histórico: MAC tiempo TQ interfaz.
+        if parts.len() >= 4 && is_mac_address(parts[0]) {
             let mac = parts[0].to_string();
             let iface = parts[3].to_string();
-
-            // last-seen: "0.200s" → ms
             let last_seen_ms = parse_last_seen(parts[1]);
-
-            // TQ puede ser el tercer campo
-            let tq: u8 = parts[2]
-                .parse()
+            let tq = parts[2]
+                .parse::<u8>()
                 .map_err(|_| MeshError::ParseError(format!("TQ inválido: {}", parts[2])))?;
 
             neighbors.push(Neighbor {
@@ -152,22 +148,110 @@ pub fn parse_batctl_neighbors(output: &str) -> Result<Vec<Neighbor>, MeshError> 
                 tq,
                 last_seen_ms,
             });
+        // Formato actual de batctl n: interfaz MAC tiempo. El TQ se completa
+        // desde la ruta preferida de ese mismo origen en la tabla `batctl o`.
+        } else if parts.len() >= 3 && is_mac_address(parts[1]) {
+            neighbors.push(Neighbor {
+                mac: parts[1].to_string(),
+                iface: parts[0].to_string(),
+                tq: 0,
+                tq_s60: SPA::zero(),
+                last_seen_ms: parse_last_seen(parts[2]),
+            });
         }
     }
 
     Ok(neighbors)
 }
 
-/// Ejecuta `batctl n` y retorna los vecinos del nodo local.
-pub async fn get_local_neighbors() -> Result<Vec<Neighbor>, MeshError> {
-    let output = tokio::process::Command::new("/usr/sbin/batctl")
-        .arg("n")
-        .output()
-        .await
-        .map_err(|e| MeshError::BatctlNotFound(e.to_string()))?;
+fn is_mac_address(value: &str) -> bool {
+    value.len() == 17 && value.bytes().filter(|byte| *byte == b':').count() == 5
+}
 
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    parse_batctl_neighbors(&stdout)
+/// Une vecinos directos de `batctl n` con sus métricas TQ de `batctl o`.
+pub fn parse_batctl_snapshot(output: &str) -> Result<Vec<Neighbor>, MeshError> {
+    let (neighbor_output, originator_output) = output
+        .split_once("---MYCNET-ORIGINATORS---")
+        .ok_or_else(|| MeshError::ParseError("instantánea Batman incompleta".into()))?;
+    let mut neighbors = parse_batctl_neighbors(neighbor_output)?;
+    let originators = parse_batctl_originators(originator_output)?;
+
+    for neighbor in &mut neighbors {
+        if let Some(originator) = originators.iter().find(|item| item.mac == neighbor.mac) {
+            neighbor.tq = originator.tq;
+            neighbor.tq_s60 = originator.tq_s60;
+        }
+    }
+    Ok(neighbors)
+}
+
+/// Parsea la tabla de originadores de `batctl o`.
+///
+/// batctl moderno muestra cada ruta como `MAC tiempo (TQ) next-hop [interfaz]`;
+/// puede haber varias rutas por origen. Se conserva la marcada como preferida
+/// (`*`) y se usa TQ como desempate si la salida no marca una ruta.
+pub fn parse_batctl_originators(output: &str) -> Result<Vec<Neighbor>, MeshError> {
+    let mut selected: BTreeMap<String, (bool, Neighbor)> = BTreeMap::new();
+
+    for line in output.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let Some(mac_index) = parts.iter().position(|part| {
+            part.len() == 17 && part.bytes().filter(|byte| *byte == b':').count() == 5
+        }) else {
+            continue;
+        };
+        let Some(last_seen) = parts.get(mac_index + 1) else {
+            continue;
+        };
+        let Some(tq_field) = parts.get(mac_index + 2) else {
+            continue;
+        };
+        let Some(tq_text) = tq_field.trim_start_matches('(').strip_suffix(')') else {
+            continue;
+        };
+        let tq = tq_text
+            .parse::<u8>()
+            .map_err(|_| MeshError::ParseError(format!("TQ inválido: {}", tq_text)))?;
+        let Some(iface) = parts.last().map(|part| part.trim_end_matches(']')) else {
+            continue;
+        };
+        if iface.is_empty() || iface == "[" {
+            continue;
+        }
+
+        let mac = parts[mac_index].to_string();
+        let preferred = parts.first() == Some(&"*");
+        let neighbor = Neighbor {
+            mac: mac.clone(),
+            iface: iface.to_string(),
+            tq,
+            tq_s60: SPA::from_tq(tq),
+            last_seen_ms: parse_last_seen(last_seen),
+        };
+
+        let replace = selected
+            .get(&mac)
+            .map(|(old_preferred, old)| {
+                (preferred && !old_preferred) || (preferred == *old_preferred && tq > old.tq)
+            })
+            .unwrap_or(true);
+        if replace {
+            selected.insert(mac, (preferred, neighbor));
+        }
+    }
+
+    Ok(selected
+        .into_values()
+        .map(|(_, neighbor)| neighbor)
+        .collect())
+}
+
+/// Lee la instantánea periódica de `batctl n/o` y retorna los vecinos directos
+/// con su TQ. El sondeo privilegiado corre aparte; el daemon MycNet no necesita
+/// capacidades de administración de red.
+pub async fn get_local_neighbors() -> Result<Vec<Neighbor>, MeshError> {
+    let snapshot = std::fs::read_to_string("/run/mycnet/batctl-originators")?;
+    parse_batctl_snapshot(&snapshot)
 }
 
 /// Calcula la coherencia media de la red como SPA.
@@ -217,6 +301,25 @@ aa:00:00:00:00:03    0.500s  180 eth1
 aa:00:00:00:00:04    1.000s   90 eth1
 "#;
 
+    const SAMPLE_ORIGINATORS: &str = r#"
+[B.A.T.M.A.N. adv 2024.2, MainIF/MAC: vxmc1/aa:00:00:00:00:01 (bat0 BATMAN_IV)]
+   Originator        last-seen (#/255) Nexthop           [outgoingIF]
+   aa:00:00:00:00:02    0.200s   (218) aa:00:00:00:00:03 [     vxmc2]
+ * aa:00:00:00:00:02    0.200s   (250) aa:00:00:00:00:02 [     vxmc3]
+ * aa:00:00:00:00:03    0.500s   (180) aa:00:00:00:00:03 [     vxmc4]
+"#;
+
+    const SAMPLE_SNAPSHOT: &str = r#"
+[B.A.T.M.A.N. adv 2024.2, MainIF/MAC: vxmc1/aa:00:00:00:00:01 (bat0/aa:00:00:00:00:11 BATMAN_IV)]
+IF             Neighbor              last-seen
+vxmc2          aa:00:00:00:00:02    0.200s
+vxmc3          aa:00:00:00:00:03    0.500s
+---MYCNET-ORIGINATORS---
+[B.A.T.M.A.N. adv 2024.2, MainIF/MAC: vxmc1/aa:00:00:00:00:01 (bat0/aa:00:00:00:00:11 BATMAN_IV)]
+ * aa:00:00:00:00:02    0.200s   (250) aa:00:00:00:00:02 [     vxmc2]
+ * aa:00:00:00:00:03    0.500s   (180) aa:00:00:00:00:03 [     vxmc3]
+"#;
+
     #[test]
     fn parse_three_neighbors() {
         let neighbors = parse_batctl_neighbors(SAMPLE_OUTPUT).unwrap();
@@ -224,6 +327,27 @@ aa:00:00:00:00:04    1.000s   90 eth1
         assert_eq!(neighbors[0].tq, 250);
         assert_eq!(neighbors[1].tq, 180);
         assert_eq!(neighbors[2].tq, 90);
+    }
+
+    #[test]
+    fn parse_current_batctl_originators_and_preferred_route() {
+        let neighbors = parse_batctl_originators(SAMPLE_ORIGINATORS).unwrap();
+        assert_eq!(neighbors.len(), 2);
+        assert_eq!(neighbors[0].mac, "aa:00:00:00:00:02");
+        assert_eq!(neighbors[0].tq, 250);
+        assert_eq!(neighbors[0].iface, "vxmc3");
+        assert_eq!(neighbors[0].last_seen_ms, 200);
+        assert_eq!(neighbors[1].tq, 180);
+    }
+
+    #[test]
+    fn parse_batctl_snapshot_keeps_direct_peers_and_adds_tq() {
+        let neighbors = parse_batctl_snapshot(SAMPLE_SNAPSHOT).unwrap();
+        assert_eq!(neighbors.len(), 2);
+        assert_eq!(neighbors[0].mac, "aa:00:00:00:00:02");
+        assert_eq!(neighbors[0].iface, "vxmc2");
+        assert_eq!(neighbors[0].tq, 250);
+        assert_eq!(neighbors[1].tq, 180);
     }
 
     #[test]

@@ -1,0 +1,13 @@
+kind,path,source,source_provider,target,target_provider,direction,repeat,protocol,offered_mbps,throughput_mbps,loss_pct,jitter_ms,rtt_avg_ms,retransmits,seconds,error
+ping,wireguard,fenix,Vultr,kingu,Vultr,fenix->kingu,1,icmp,,,0.0,,0.803,,2,
+ping,wireguard,kingu,Vultr,fenix,Vultr,kingu->fenix,1,icmp,,,0.0,,0.44,,2,
+iperf3,wireguard,fenix,Vultr,kingu,Vultr,fenix->kingu,1,tcp,,838.214,,,,0,3,
+iperf3,wireguard,fenix,Vultr,kingu,Vultr,kingu->fenix,1,tcp,,932.331,,,,0,3,
+iperf3,wireguard,fenix,Vultr,kingu,Vultr,fenix->kingu,1,udp,5,5.003,0,0.029,,,2,
+iperf3,wireguard,fenix,Vultr,kingu,Vultr,kingu->fenix,1,udp,5,5.004,0,0.028,,,2,
+ping,bat0,fenix,Vultr,kingu,Vultr,fenix->kingu,1,icmp,,,0.0,,0.479,,2,
+ping,bat0,kingu,Vultr,fenix,Vultr,kingu->fenix,1,icmp,,,0.0,,1.279,,2,
+iperf3,bat0,fenix,Vultr,kingu,Vultr,fenix->kingu,1,tcp,,641.558,,,,0,3,
+iperf3,bat0,fenix,Vultr,kingu,Vultr,kingu->fenix,1,tcp,,609.713,,,,90,3,
+iperf3,bat0,fenix,Vultr,kingu,Vultr,fenix->kingu,1,udp,5,4.999,0,0.129,,,2,
+iperf3,bat0,fenix,Vultr,kingu,Vultr,kingu->fenix,1,udp,5,4.999,0,0.071,,,2,

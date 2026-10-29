@@ -24,3 +24,6 @@ target/
 .code-review-graph/
 .claude/settings.json.bak.*
 .omo/
+
+# Grafo y caché local generados por graphify
+/graphify-out/

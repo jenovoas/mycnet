@@ -1,0 +1,2 @@
+kind,path,source,source_provider,target,target_provider,direction,repeat,protocol,offered_mbps,throughput_mbps,loss_pct,jitter_ms,rtt_avg_ms,retransmits,seconds,error
+iperf3,wireguard,hercules,GCP,ocean,Linode,ocean->hercules,1,tcp,,93.949,,,,493,30,
