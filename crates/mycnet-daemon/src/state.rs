@@ -106,6 +106,37 @@ impl AppState {
         }
     }
 
+    async fn reconnect_sentinel_bridges(&self) {
+        let mut sentinel = self.sentinel.lock().await;
+        if sentinel.is_none() {
+            match SentinelBridge::open() {
+                Ok(bridge) => {
+                    info!(
+                        shm_size = bridge.shm_size(),
+                        capacity = bridge.capacity(),
+                        "SentinelBridge reconectado"
+                    );
+                    *sentinel = Some(bridge);
+                }
+                Err(error) => tracing::debug!(error = %error, "SentinelBridge aún no disponible"),
+            }
+        }
+        drop(sentinel);
+
+        let mut fractal_bridge = self.fractal_bridge.lock().await;
+        if fractal_bridge.is_none() {
+            match SentinelFractalBridge::open() {
+                Ok(bridge) => {
+                    info!("SentinelFractalBridge reconectado");
+                    *fractal_bridge = Some(bridge);
+                }
+                Err(error) => {
+                    tracing::debug!(error = %error, "SentinelFractalBridge aún no disponible")
+                }
+            }
+        }
+    }
+
     /// Tick principal: lee batctl → actualiza ADM → broadcast.
     /// Cada 17 ticks (Salto-17): refresca proyección del lattice sentinel al ADM.
     pub async fn tick(&self) -> Result<()> {
@@ -141,8 +172,11 @@ impl AppState {
             // sentinel (acoplada a eBPF Ring-0). El ADM micelial refleja
             // batctl — son dos capas que se complementan, no compiten.
             let tick_now = adm.tick_count;
-            let should_refresh = tick_now > 0
-                && tick_now % SENTINEL_REFRESH_EVERY_TICKS == 0;
+            let should_refresh = tick_now > 0 && tick_now % SENTINEL_REFRESH_EVERY_TICKS == 0;
+
+            if should_refresh {
+                self.reconnect_sentinel_bridges().await;
+            }
 
             let mut sentinel_projected = 0usize;
             if should_refresh {

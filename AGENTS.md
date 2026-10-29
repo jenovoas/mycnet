@@ -49,3 +49,7 @@ Este proyecto cuenta con soporte de grafo de conocimiento local mediante **graph
 - Si existe `graphify-out/wiki/index.md` o `graphify-out/GRAPH_REPORT.md`, consúltalos para navegación arquitectónica global.
 - Tras realizar cambios importantes en el código, ejecuta `graphify update .` para mantener el grafo sincronizado (análisis AST local sin consumo de tokens de API).
 - Para construir o reconstruir el grafo completo, utiliza el comando `/graphify .`.
+
+## Alcance de las verificaciones de despliegue
+- Cuando el usuario pida revisar o verificar el despliegue, limitar la comprobación a MycNet y sus propios servicios, binarios, API, métricas y transporte.
+- No inspeccionar ni evaluar el estado o despliegue de Sentinel salvo que el usuario lo solicite explícitamente. La disponibilidad de una integración externa puede anotarse solo como estado observable desde MycNet, sin convertirla en una tarea de despliegue de Sentinel.
