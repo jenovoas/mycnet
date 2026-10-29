@@ -38,7 +38,7 @@ pub async fn start_mesh_udp(
                         match FractalMeshPacket::from_bytes(&packet_bytes) {
                             Ok(packet) => {
                                 debug!(src = %src, seq = packet.sequence_id, token_id = packet.seed.token_id, "Semilla fractal recibida vía UDP");
-                                if let Err(e) = recv_state.ingest_remote_seed(packet.seed).await {
+                                if let Err(e) = recv_state.ingest_remote_seed(packet.seed, src).await {
                                     warn!(error = %e, "Fallo al inyectar semilla remota en LiquidLattice");
                                 }
                             }
@@ -71,8 +71,11 @@ pub async fn start_mesh_udp(
                 let bytes = packet.to_bytes();
 
                 for peer in &peers {
-                    if let Err(e) = send_socket.send_to(&bytes, peer).await {
-                        debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
+                    match send_socket.send_to(&bytes, peer).await {
+                        Ok(_) => send_state.record_fractal_packet_sent(*peer),
+                        Err(e) => {
+                            debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
+                        }
                     }
                 }
             }
@@ -86,15 +89,35 @@ pub async fn start_mesh_udp(
 mod tests {
     use super::*;
     use mycnet_core::s60::HolographicSeedBinary;
+    use std::sync::atomic::Ordering;
     use tokio::sync::broadcast;
+
+    #[test]
+    fn test_packet_send_metrics_are_filtered_by_peer() {
+        let (tx, _rx) = broadcast::channel(16);
+        let metrics_peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
+        let other_peer: SocketAddr = "127.0.0.1:42430".parse().unwrap();
+        let state = AppState::new(tx, Some(metrics_peer));
+
+        state.record_fractal_packet_sent(metrics_peer);
+        state.record_fractal_packet_sent(other_peer);
+
+        assert_eq!(state.fractal_packets_sent.load(Ordering::Relaxed), 2);
+        assert_eq!(
+            state
+                .fractal_packets_sent_to_peer
+                .load(Ordering::Relaxed),
+            1
+        );
+    }
 
     #[tokio::test]
     async fn test_udp_mesh_seed_transmission_roundtrip() {
         let (tx, _rx) = broadcast::channel(16);
-        let state = Arc::new(AppState::new(tx));
-
         let receiver_addr: SocketAddr = "127.0.0.1:42429".parse().unwrap();
         let sender_socket = UdpSocket::bind("127.0.0.1:42428").await.unwrap();
+        let sender_addr = sender_socket.local_addr().unwrap();
+        let state = Arc::new(AppState::new(tx, Some(sender_addr)));
 
         let recv_socket = UdpSocket::bind(receiver_addr).await.unwrap();
 
@@ -105,14 +128,38 @@ mod tests {
 
         // Recibir y procesar
         let mut buf = [0u8; 128];
-        let (len, _) = recv_socket.recv_from(&mut buf).await.unwrap();
+        let (len, src) = recv_socket.recv_from(&mut buf).await.unwrap();
         assert_eq!(len, 40);
 
         let received_packet = FractalMeshPacket::from_bytes(&buf[..40].try_into().unwrap()).unwrap();
         assert_eq!(received_packet.seed.token_id, 777);
 
-        let coord = state.ingest_remote_seed(received_packet.seed).await.unwrap();
+        let coord = state
+            .ingest_remote_seed(received_packet.seed, src)
+            .await
+            .unwrap();
         assert_eq!(coord.q, 0);
         assert_eq!(coord.r, 0);
+        assert_eq!(state.fractal_seeds_ingested.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            state
+                .fractal_seeds_ingested_from_peer
+                .load(Ordering::Relaxed),
+            1
+        );
+
+        let other_src: SocketAddr = "127.0.0.1:42430".parse().unwrap();
+        let other_seed = HolographicSeedBinary::from_lfm(778, 0, 0, 10);
+        state
+            .ingest_remote_seed(other_seed, other_src)
+            .await
+            .unwrap();
+        assert_eq!(state.fractal_seeds_ingested.load(Ordering::Relaxed), 2);
+        assert_eq!(
+            state
+                .fractal_seeds_ingested_from_peer
+                .load(Ordering::Relaxed),
+            1
+        );
     }
 }

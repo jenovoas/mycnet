@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """
-Benchmark Comparativo Multi-Transporte: Fenix <-> Kingu
-Mide transferencia masiva (10 MB, 50 MB) a través de 4 canales:
-  1. TCP Directo por Internet Pública (68.211.176.190:9444)
-  2. WireGuard VPN (10.88.0.2:9444)
-  3. Túnel Cifrado SSH (Puerto 4222)
-  4. Resonancia MycNet (Compresión Fractal por Semilla S60 + Reconstrucción en Destino)
+Benchmark comparativo de TCP público, WireGuard, SSH y semillas MycNet reales.
+El canal MycNet observa los contadores del daemon emisor y receptor; no genera semillas.
 """
 
-import time
+import argparse
+import json
 import socket
 import subprocess
-import json
-import sys
+import time
+import urllib.request
 
 PUBLIC_IP = "68.211.176.190"
 WG_IP     = "10.88.0.2"
@@ -60,86 +57,184 @@ def send_ssh_stream(size_mb):
     except Exception as e:
         return None, str(e)
 
-def send_mycnet_fractal(size_mb):
-    """
-    Simulación de Resonancia MycNet:
-    El nodo emisor no transporta los 50 MB de datos brutos.
-    Transmite la SEMILLA FRACTAL (estado inicial S60, vector SPA de 40 bytes,
-    coeficiente de acoplamiento y matriz de permutación = ~128 bytes)
-    y el nodo receptor corre el proceso fractal iterado para reconstruir
-    los 50 MB en memoria compartida (LiquidLattice / SHM).
-    """
-    # 1. Empaquetar semilla (128 bytes)
-    seed_payload = b"MYCNET_S60_SEED:" + b"\x01\x20\x02\x18" * 28  # 128 bytes
-    
-    # 2. Transmitir semilla por red (WireGuard UDP/TCP)
-    start_tx = time.perf_counter()
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(5.0)
-        s.connect((WG_IP, PORT))
-        s.sendall(seed_payload)
-        s.shutdown(socket.SHUT_WR)
-    tx_time = time.perf_counter() - start_tx
-    
-    # 3. Tiempo de reconstrucción determinista en memoria (S60 fractal step iterado)
-    start_reconstruct = time.perf_counter()
-    reconstructed_bytes = size_mb * 1024 * 1024
-    # Simulación local del cómputo de expansión
-    _ = [sum(seed_payload[:16]) for _ in range(100)]
-    recon_time = time.perf_counter() - start_reconstruct
-    
-    total_time = tx_time + recon_time
-    effective_throughput = size_mb / total_time if total_time > 0 else 0
-    compression_ratio = reconstructed_bytes / len(seed_payload)
-    
-    return total_time, tx_time, effective_throughput, compression_ratio
+def fetch_seed_health(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "MycNet-Benchmark/1.0"})
+    with urllib.request.urlopen(request, timeout=3) as response:
+        data = json.loads(response.read().decode("utf-8"))
+
+    required_counters = (
+        "fractal_packet_bytes",
+        "fractal_packets_sent_to_peer",
+        "fractal_seeds_ingested_from_peer",
+    )
+    if not isinstance(data, dict) or data.get("status") != "OK":
+        raise ValueError("respuesta de salud inválida")
+    if not isinstance(data.get("fractal_source_connected"), bool):
+        raise ValueError("falta fractal_source_connected")
+    if data.get("fractal_metrics_peer") is not None and not isinstance(
+        data["fractal_metrics_peer"], str
+    ):
+        raise ValueError("fractal_metrics_peer inválido")
+    for name in required_counters:
+        value = data.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(f"contador inválido: {name}")
+        if name == "fractal_packet_bytes" and value == 0:
+            raise ValueError("tamaño de paquete inválido")
+    return data
+
+
+def benchmark_mycnet_seeds(
+    source_url, receiver_url, source_peer, receiver_peer, window_seconds
+):
+    print("\n▶ Semillas MycNet reales (SHM → UDP → ingestión)...")
+    try:
+        source_before = fetch_seed_health(source_url)
+        receiver_before = fetch_seed_health(receiver_url)
+        if not source_before["fractal_source_connected"]:
+            print("  Sin medición: el daemon emisor no tiene conectado el ring SHM de semillas.")
+            return
+        if source_before["fractal_metrics_peer"] != source_peer:
+            print("  Sin medición: MYCNET_METRICS_PEER del emisor no coincide con el destino esperado.")
+            return
+        if receiver_before["fractal_metrics_peer"] != receiver_peer:
+            print("  Sin medición: MYCNET_METRICS_PEER del receptor no coincide con el origen esperado.")
+            return
+
+        packet_bytes = source_before["fractal_packet_bytes"]
+        if receiver_before["fractal_packet_bytes"] != packet_bytes:
+            print("  Sin medición: los daemons reportan tamaños de paquete distintos.")
+            return
+
+        start_ns = time.monotonic_ns()
+        time.sleep(window_seconds)
+        source_after = fetch_seed_health(source_url)
+        receiver_after = fetch_seed_health(receiver_url)
+        elapsed_ns = time.monotonic_ns() - start_ns
+    except Exception as error:
+        print(f"  Sin medición: no se pudo consultar ambos daemons: {error}")
+        return
+
+    if not source_after["fractal_source_connected"]:
+        print("  Sin medición: se perdió la conexión del emisor con el ring SHM.")
+        return
+    if (
+        source_after["fractal_metrics_peer"] != source_peer
+        or receiver_after["fractal_metrics_peer"] != receiver_peer
+    ):
+        print("  Sin medición: cambió el peer de métricas durante la ventana.")
+        return
+    if (
+        source_after["fractal_packet_bytes"] != packet_bytes
+        or receiver_after["fractal_packet_bytes"] != packet_bytes
+    ):
+        print("  Sin medición: cambió el tamaño del paquete durante la ventana.")
+        return
+
+    sent_before = source_before["fractal_packets_sent_to_peer"]
+    sent_after = source_after["fractal_packets_sent_to_peer"]
+    received_before = receiver_before["fractal_seeds_ingested_from_peer"]
+    received_after = receiver_after["fractal_seeds_ingested_from_peer"]
+    if sent_after < sent_before or received_after < received_before:
+        print("  Sin medición: un contador se reinició durante la ventana.")
+        return
+
+    sent = sent_after - sent_before
+    received = received_after - received_before
+    if sent == 0:
+        print("  Sin medición: no se enviaron semillas reales al peer configurado durante la ventana.")
+        return
+
+    print(f"  Paquetes UDP enviados a {source_peer}: {sent} ({sent * packet_bytes} bytes)")
+    print(f"  Semillas ingeridas desde {receiver_peer}: {received} ({received * packet_bytes} bytes)")
+    print("  Conteos filtrados por peer; no correlacionan cada sequence_id individual.")
+    if received == 0:
+        print("  El receptor no ingirió semillas del peer configurado durante la ventana.")
+    elif elapsed_ns > 0:
+        rate_milli = received * 1_000_000_000_000 // elapsed_ns
+        print(f"  Tasa de ingestión desde ese peer: {rate_milli // 1000}.{rate_milli % 1000:03d} semillas/s")
 
 def main():
+    parser = argparse.ArgumentParser(description="Benchmark de transporte MycNet")
+    parser.add_argument("--mycnet-source-health", help="URL /health del daemon emisor")
+    parser.add_argument("--mycnet-receiver-health", help="URL /health del daemon receptor")
+    parser.add_argument("--mycnet-source-peer", help="Peer UDP receptor esperado en MYCNET_METRICS_PEER del emisor")
+    parser.add_argument("--mycnet-receiver-peer", help="Peer UDP emisor esperado en MYCNET_METRICS_PEER del receptor")
+    parser.add_argument("--mycnet-window-seconds", type=int, help="Duración entera de observación")
+    parser.add_argument(
+        "--mycnet-only",
+        action="store_true",
+        help="Ejecutar solo la medición MycNet, sin generar tráfico TCP/SSH",
+    )
+    args = parser.parse_args()
+
+    mycnet_options = (
+        args.mycnet_source_health,
+        args.mycnet_receiver_health,
+        args.mycnet_source_peer,
+        args.mycnet_receiver_peer,
+        args.mycnet_window_seconds,
+    )
+    if any(value is not None for value in mycnet_options) and not all(
+        value is not None for value in mycnet_options
+    ):
+        parser.error("los cinco parámetros --mycnet-* son necesarios para medir semillas por peer")
+    if args.mycnet_only and not all(value is not None for value in mycnet_options):
+        parser.error("--mycnet-only requiere los cinco parámetros --mycnet-*")
+    if args.mycnet_window_seconds is not None and args.mycnet_window_seconds <= 0:
+        parser.error("--mycnet-window-seconds debe ser mayor que cero")
+
     print("=" * 75)
-    print("  BENCHMARK COMPARATIVO MULTI-TRANSPORTE: FENIX <-> KINGU")
+    title = (
+        "BENCHMARK SOLO MycNet: FENIX <-> KINGU"
+        if args.mycnet_only
+        else "BENCHMARK COMPARATIVO MULTI-TRANSPORTE: FENIX <-> KINGU"
+    )
+    print(f"  {title}")
     print("=" * 75)
     print(f"  Nodo Origen:  Fenix (Azure A - 20.226.112.222 / 10.88.0.1)")
     print(f"  Nodo Destino: Kingu (Azure B - 68.211.176.190 / 10.88.0.2)")
     print("-" * 75)
-    
-    sizes = [10, 50]  # 10 MB y 50 MB
-    
-    for size in sizes:
-        print(f"\n▶ PROBANDO VOLUMEN MASIVO: {size} MB ({size * 1024} KB)")
-        print("-" * 75)
-        
-        # 1. TCP Directo por Internet Pública
-        print(f"  [1] TCP Directo Internet ({PUBLIC_IP}:{PORT})...", end="", flush=True)
-        t_tcp, mbps_tcp = send_tcp_stream(PUBLIC_IP, PORT, size)
-        if t_tcp:
-            print(f" ✓ {t_tcp:.3f} s  | Throughput: {mbps_tcp:.2f} MB/s (~{mbps_tcp*8:.2f} Mbps)")
-        else:
-            print(f" ✗ Falló: {mbps_tcp}")
-            
-        # 2. WireGuard VPN (wg0)
-        print(f"  [2] WireGuard VPN ({WG_IP}:{PORT})...", end="", flush=True)
-        t_wg, mbps_wg = send_tcp_stream(WG_IP, PORT, size)
-        if t_wg:
-            print(f"       ✓ {t_wg:.3f} s  | Throughput: {mbps_wg:.2f} MB/s (~{mbps_wg*8:.2f} Mbps)")
-        else:
-            print(f" ✗ Falló: {mbps_wg}")
-            
-        # 3. Túnel SSH Cifrado (Port 4222)
-        print(f"  [3] Túnel Cifrado SSH (:4222)...", end="", flush=True)
-        t_ssh, mbps_ssh = send_ssh_stream(size)
-        if t_ssh:
-            print(f"            ✓ {t_ssh:.3f} s  | Throughput: {mbps_ssh:.2f} MB/s (~{mbps_ssh*8:.2f} Mbps)")
-        else:
-            print(f" ✗ Falló: {mbps_ssh}")
-            
-        # 4. Resonancia MycNet (Compresión Fractal S60)
-        print(f"  [4] Resonancia MycNet (Fractal S60)...", end="", flush=True)
-        t_myc, tx_myc, mbps_myc, comp_ratio = send_mycnet_fractal(size)
-        print(f"      ✓ {t_myc:.4f} s | Throughput Efectivo: {mbps_myc:.2f} MB/s (~{mbps_myc*8:.2f} Mbps)")
-        print(f"      └── Transmisión de Semilla: {tx_myc*1000:.2f} ms | Ratio de Compresión: {comp_ratio:.0f}:1")
+
+    if not args.mycnet_only:
+        sizes = [10, 50]  # 10 MB y 50 MB
+
+        for size in sizes:
+            print(f"\n▶ PROBANDO VOLUMEN MASIVO: {size} MB ({size * 1024} KB)")
+            print("-" * 75)
+
+            # 1. TCP Directo por Internet Pública
+            print(f"  [1] TCP Directo Internet ({PUBLIC_IP}:{PORT})...", end="", flush=True)
+            t_tcp, mbps_tcp = send_tcp_stream(PUBLIC_IP, PORT, size)
+            if t_tcp:
+                print(f" ✓ {t_tcp:.3f} s  | Throughput: {mbps_tcp:.2f} MB/s (~{mbps_tcp*8:.2f} Mbps)")
+            else:
+                print(f" ✗ Falló: {mbps_tcp}")
+
+            # 2. WireGuard VPN (wg0)
+            print(f"  [2] WireGuard VPN ({WG_IP}:{PORT})...", end="", flush=True)
+            t_wg, mbps_wg = send_tcp_stream(WG_IP, PORT, size)
+            if t_wg:
+                print(f"       ✓ {t_wg:.3f} s  | Throughput: {mbps_wg:.2f} MB/s (~{mbps_wg*8:.2f} Mbps)")
+            else:
+                print(f" ✗ Falló: {mbps_wg}")
+
+            # 3. Túnel SSH Cifrado (Port 4222)
+            print(f"  [3] Túnel Cifrado SSH (:4222)...", end="", flush=True)
+            t_ssh, mbps_ssh = send_ssh_stream(size)
+            if t_ssh:
+                print(f"            ✓ {t_ssh:.3f} s  | Throughput: {mbps_ssh:.2f} MB/s (~{mbps_ssh*8:.2f} Mbps)")
+            else:
+                print(f" ✗ Falló: {mbps_ssh}")
+
+    if all(value is not None for value in mycnet_options):
+        benchmark_mycnet_seeds(*mycnet_options)
+    else:
+        print("\n▶ Semillas MycNet reales...")
+        print("  Sin medición: configura ambos MYCNET_METRICS_PEER, las URL, los peers esperados y la ventana.")
 
     print("\n" + "=" * 75)
-    print("  BENCHMARK FINALIZADO EXITOSAMENTE")
+    print("  BENCHMARK FINALIZADO; revisa el resultado de cada canal")
     print("=" * 75)
 
 if __name__ == '__main__':

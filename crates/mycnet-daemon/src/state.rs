@@ -3,9 +3,11 @@
 // Colaboración abierta con atribución. Uso comercial PROHIBIDO sin autorización.
 //! Estado compartido del daemon.
 
-use tokio::sync::{Mutex, broadcast};
-use serde_json::json;
 use anyhow::Result;
+use serde_json::json;
+use std::net::SocketAddr;
+use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
+use tokio::sync::{Mutex, broadcast};
 use tracing::{info, warn};
 
 use mycnet_core::{ADM, MeshState, PhysicalNode};
@@ -33,10 +35,15 @@ pub struct AppState {
     pub lattice:        Mutex<LiquidLattice>,
     pub sentinel:       Mutex<Option<SentinelBridge>>,
     pub fractal_bridge: Mutex<Option<SentinelFractalBridge>>,
+    pub metrics_peer: Option<SocketAddr>,
+    pub fractal_packets_sent: AtomicU64,
+    pub fractal_packets_sent_to_peer: AtomicU64,
+    pub fractal_seeds_ingested: AtomicU64,
+    pub fractal_seeds_ingested_from_peer: AtomicU64,
 }
 
 impl AppState {
-    pub fn new(tx: broadcast::Sender<String>) -> Self {
+    pub fn new(tx: broadcast::Sender<String>, metrics_peer: Option<SocketAddr>) -> Self {
         let mut adm = ADM::new();
 
         // Red hexagonal de 6 nodos (topología estándar MycNet)
@@ -91,6 +98,11 @@ impl AppState {
             lattice: Mutex::new(LiquidLattice::new(SENTINEL_LATTICE_RINGS)),
             sentinel: Mutex::new(sentinel),
             fractal_bridge: Mutex::new(fractal_bridge),
+            metrics_peer,
+            fractal_packets_sent: AtomicU64::new(0),
+            fractal_packets_sent_to_peer: AtomicU64::new(0),
+            fractal_seeds_ingested: AtomicU64::new(0),
+            fractal_seeds_ingested_from_peer: AtomicU64::new(0),
         }
     }
 
@@ -198,10 +210,29 @@ impl AppState {
         }
     }
 
+    /// Registra un datagrama solo después de que `send_to` tuvo éxito.
+    pub fn record_fractal_packet_sent(&self, peer: SocketAddr) {
+        self.fractal_packets_sent.fetch_add(1, AtomicOrdering::Relaxed);
+        if self.metrics_peer == Some(peer) {
+            self.fractal_packets_sent_to_peer
+                .fetch_add(1, AtomicOrdering::Relaxed);
+        }
+    }
+
     /// Inyecta una semilla fractal recibida desde la red mesh remota.
-    pub async fn ingest_remote_seed(&self, seed: HolographicSeedBinary) -> std::result::Result<Coord, &'static str> {
+    pub async fn ingest_remote_seed(
+        &self,
+        seed: HolographicSeedBinary,
+        source: SocketAddr,
+    ) -> std::result::Result<Coord, &'static str> {
         let mut lattice = self.lattice.lock().await;
         let coord = lattice.inject_fractal_seed(&seed)?;
+        self.fractal_seeds_ingested
+            .fetch_add(1, AtomicOrdering::Relaxed);
+        if self.metrics_peer == Some(source) {
+            self.fractal_seeds_ingested_from_peer
+                .fetch_add(1, AtomicOrdering::Relaxed);
+        }
 
         let _ = self.tx.send(json!({
             "type": "fractal_seed_ingested",

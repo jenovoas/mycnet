@@ -33,7 +33,13 @@ async fn main() -> Result<()> {
     info!("🍄 MycNet Daemon arrancando...");
 
     let (tx, _rx) = broadcast::channel::<String>(256);
-    let state = Arc::new(AppState::new(tx.clone()));
+    // Peer único de métricas; no funciona como filtro de acceso de entrada.
+    let metrics_peer = match std::env::var("MYCNET_METRICS_PEER") {
+        Ok(peer) => Some(peer.parse::<SocketAddr>()?),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(error) => return Err(error.into()),
+    };
+    let state = Arc::new(AppState::new(tx.clone(), metrics_peer));
 
     // Loop isocrono: batctl → ADM → broadcast
     let state_loop = Arc::clone(&state);
