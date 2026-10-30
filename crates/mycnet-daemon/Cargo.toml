@@ -8,6 +8,10 @@ authors.workspace = true
 name = "mycnetd"
 path = "src/main.rs"
 
+[[bin]]
+name = "guardian-uplink"
+path = "src/bin/guardian_uplink.rs"
+
 [dependencies]
 mycnet-core        = { path = "../mycnet-core" }
 mycnet-memory      = { path = "../mycnet-memory" }

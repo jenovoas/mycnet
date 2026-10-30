@@ -14,6 +14,18 @@ use tracing::{debug, error, info, warn};
 use mycnet_core::mesh::FractalMeshPacket;
 use crate::state::AppState;
 
+/// DMZ (hercules/ocean): trafico libre HACIA ADENTRO por WG/batman, nunca
+/// reciben del lattice interno. Recepcion de DMZ: ACEPTADA (cantan adentro).
+/// Envio a DMZ: BLOQUEADO (no reciben). Lo de AFUERA va por firewall.
+/// MYCNET_DMZ_PEERS="ip1,ip2" (solo IP, sin puerto).
+fn dmz_ips() -> Vec<std::net::IpAddr> {
+    std::env::var("MYCNET_DMZ_PEERS")
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect()
+}
+
 pub async fn start_mesh_udp(
     state: Arc<AppState>,
     bind_addr: &str,
@@ -30,6 +42,8 @@ pub async fn start_mesh_udp(
         loop {
             match recv_socket.recv_from(&mut buf).await {
                 Ok((len, src)) => {
+                    // DMZ canta hacia adentro: aceptado. El filtro esta en el
+                    // envio (linea ~95): el lattice interno nunca envia a DMZ.
                     if len == 40 {
                         let packet_bytes: [u8; 40] = match buf[..40].try_into() {
                             Ok(b) => b,
@@ -70,7 +84,12 @@ pub async fn start_mesh_udp(
                 let packet = FractalMeshPacket::new(sequence_id, seed);
                 let bytes = packet.to_bytes();
 
+                let dmz = dmz_ips();
                 for peer in &peers {
+                    // DMZ: nunca reciben seeds del lattice interno.
+                    if dmz.contains(&peer.ip()) {
+                        continue;
+                    }
                     match send_socket.send_to(&bytes, peer).await {
                         Ok(_) => send_state.record_fractal_packet_sent(*peer),
                         Err(e) => {
