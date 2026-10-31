@@ -77,3 +77,68 @@ La metodología reproducible y el benchmark están en [`docs/benchmarks/METODOLO
 ## Implementación MyCNet en el repositorio
 
 El repositorio contiene `HolographicSyncEngine` (`crates/mycnet-memory/src/holographic_sync.rs`), `HolographicSeed` y mecanismos de expansión. La presencia de estas capacidades en el código no demuestra sincronización correcta entre nodos desplegados.
+
+## Recuperación Guardian y alta de Marte — 2026-10-30/31
+
+Esta comprobación posterior no convierte las observaciones del 29 en estado actual.
+
+- Corregido `guardian-uplink`: el WAL guarda `payload` como texto JSON, pero
+  `payload.data` es un objeto. `guardian_code` está en `data.sanitized_event`.
+  Campos incompletos se rechazan en vez de convertirse silenciosamente en cero.
+  Un append parcial espera el salto de línea. La amplitud raw no se reescala.
+- `cargo test --workspace --locked --offline`: 35 pruebas pasan. Después de
+  retirar el filtro DMZ incorrecto, las dos pruebas de `mycnetd` también pasan
+  y los binarios release compilan.
+- Smoke del binario con UDP real: una línea parcial no emite; al completarla
+  produce un datagrama de 40 bytes con amplitud raw `12960000` intacta;
+  un payload incompleto no genera una semilla cero. El fixture fue descartado.
+- Marte: `guardian-uplink.service` activo con binario SHA256
+  `17db6227b3a8963538aa8005516eb199cddcebbe9cbf9779cf8d2d30e9c5f9bf`.
+  Se reinició solo ese servicio. Respaldo binario:
+  `/usr/local/lib/sentinel/guardian-uplink.pre-json-object`.
+- Fenix recibió datagramas reales de `10.88.0.6` por `wg0` a UDP4242 y su
+  contador de semillas pasó de 0 a 3 tras corregir el parser.
+- Se reemplazó el proceso accidental `mycnetd --help` de Marte por una unidad
+  habilitada, con listeners solo en `10.88.0.6:7474/TCP` y `:4242/UDP`,
+  peer y métrica hacia `10.88.0.1:4242`. Fuente local SHM desconectada;
+  no se observaron `bat0` ni `batctl` en Marte. Esto prueba transporte WG,
+  **no** incorporación de Marte a Batman ni sincronización temporal.
+- Fenix y Marte ejecutan `mycnetd` SHA256
+  `8219e3bd6a92831906aeae5a356bdee065163fcb8748199f8e610f7b4050ede7`.
+  Fenix conserva peers `.2`, `.3`, `.4`, `.5` y añade `.6` por drop-in.
+  Ambos servicios se verificaron activos; respaldo previo con sufijo
+  `.pre-dmz-correction`.
+- Marte observó 39744 semillas desde el peer `10.88.0.1:4242`; una sonda
+  adicional de transporte desde puerto efímero explica la diferencia de una
+  unidad con el total. Esa sonda llevaba amplitud cero y **no era un evento eBPF**.
+- Configuración versionada: `systemd/mycnetd-marte.service`,
+  `systemd/mycnetd-fenix-peers.conf` (instalado como
+  `/etc/systemd/system/mycnetd.service.d/mesh-peers.conf` en Fenix) y
+  `systemd/guardian-uplink.service` como plantilla del adaptador.
+
+### Firewall privado y DMZ
+
+Reglas comprobadas en runtime y guardadas con `--permanent`, **sin reload**:
+
+| Nodo/zona | Origen | Destino | Permiso |
+|---|---|---|---|
+| Fenix / `wgmesh` | `10.88.0.6/32` | `10.88.0.1` | UDP4242 |
+| Marte / `public` (zona efectiva de `wg0`) | `10.88.0.1/32` | `10.88.0.6` | UDP4242 |
+
+Hercules/Ocean siguen identificados como DMZ frente al exterior; por decisión
+del operador conservan comunicación por la red privada VPN/MyCNet. Se retiró
+`MYCNET_DMZ_PEERS`: suprimir envíos **internos** a esos peers no implementaba
+la prohibición de ingreso **externo**. No se modificó ningún sistema ni firewall
+de Hercules/Ocean y no se certifica aquí su aislamiento exterior.
+
+### Límites del adaptador
+
+El uplink arranca al final del WAL: no reenvía backlog ni tiene offset durable,
+acuse de recibo UDP o seguimiento de rotación del archivo. CRC16 comprueba
+integridad de formato, no autentica al emisor. La proyección severity/código
+Guardian a los campos phase/yhwh no mide fase ni pulso del oscilador.
+Los eventos observados tienen amplitud raw0: transportarlos no prueba excitación
+no nula, resonancia física ni frecuencia DTC.
+
+La correlación hasta CrystalRuntime y las limitaciones de Cortex se registran
+en Sentinel: `docs/ops/puente-mycnet-cortex-2026-10-30.md`.

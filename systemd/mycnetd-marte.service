@@ -1,0 +1,23 @@
+[Unit]
+Description=MyCNet mesh daemon (Marte, transporte privado WireGuard)
+Wants=network-online.target
+After=network-online.target wg-quick@wg0.service
+
+[Service]
+Type=simple
+User=jnovoas
+WorkingDirectory=/home/jnovoas
+Environment=RUST_LOG=info
+Environment=MYCNET_BIND=10.88.0.6:7474
+Environment=MYCNET_UDP_BIND=10.88.0.6:4242
+Environment=MYCNET_BAT_IP=10.88.0.6
+Environment=MYCNET_PEERS=10.88.0.1:4242
+Environment=MYCNET_METRICS_PEER=10.88.0.1:4242
+ExecStart=/home/jnovoas/.local/bin/mycnetd
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

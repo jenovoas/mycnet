@@ -1,0 +1,17 @@
+[Unit]
+Description=Guardian WAL to MyCNet mesh uplink (Marte a Fenix)
+After=network-online.target sentinel-security-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=GUARDIAN_WAL=/var/log/sentinel/guardian_security_wal.jsonl
+Environment=MYCNET_UPLINK_PEER=10.88.0.1:4242
+ExecStart=/usr/local/bin/guardian-uplink
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
