@@ -44,3 +44,52 @@ El usuario reporta que Sentinel backend está saludable en Fenix, accesible desd
 5. Validar en una ventana autorizada la SHM mayor/productor en Fenix, namespace y permisos, tick común y recepción correlacionada en Kingu antes de ejecutar benchmarks comparativos. Hasta entonces, no declarar sincronización E2E ni despliegue de estas integraciones.
 
 **Estado de este registro:** actualización documental local basada en inspección de código y documentos; sin cambio de código, ejecución remota, benchmark ni despliegue.
+
+## Continuidad del ring tras recrear Cortex — 2026-10-31
+
+Esta actualización posterior no reescribe las observaciones del 29.
+
+- Se reprodujo el desorden por overrun del lector: después de publicar 1064
+  semillas en capacidad1024, devolvía tokens1024–1055 en lugar de40–71.
+  `poll_new_seeds` ahora empieza en la ventana aún retenida y conserva el
+  orden al limitar el lote. Si observa retroceso de head, reinicia su cursor.
+- Cortex conserva el head publicado al reabrir el objeto POSIX existente,
+  bajo su lock de escritor único. No modifica el layout: cabecera64B,
+  semillas32B, capacidad1024, magic/version1. Un header desconocido causa
+  error explícito, no reseteo silencioso de datos publicados.
+- Se añadió lectura atómica acquire acotada/alineada al buffer de Sentinel,
+  rechazando además un mapping cerrado. Las publicaciones mantienen release.
+- MyCNet: `cargo test --workspace --locked --offline`,37 pruebas pasan.
+  Incluye regresión fallando antes/pasando después por overrun y recuperación
+  del cursor cuando head retrocede. Binario release compilado.
+- Cortex: las5 pruebas seleccionadas de CrystalRuntime pasan: persistencia
+  de head entre mappings del productor, rechazo de header desconocido y de
+  mapping cerrado, además de las2 pruebas existentes del runtime. No se
+  repitió la suite completa ni el fallo TruthSync previamente registrado.
+- Fenix ejecuta MyCNet SHA256
+  `4a2d1675a6e85e30a7901f149cc5abc264627b8e310269ce581eedfdbd643c0b`;
+  backup anterior `~/.local/bin/mycnetd.pre-shm-continuity`.
+- Se recreó solo Cortex entre00:16:12 y00:16:53 UTC:
+  `sentinel-cortex:8ee902e9-shm-continuity-2`,
+  imagen `sha256:5392ea57246d58c86487c260124c3869774412675607bae2af8a21b4f1f4a2d1`,
+  healthy. MyCNet mantuvo PID1759643 durante esa recreación.
+- A00:16:23 UTC Cortex reconectó WS101 y recibió frames; a00:16:23.545
+  aceptó token1836041237/raw0. Marte reportó72091 recepciones desde peer Fenix.
+- Observación continua de180s, intervalo solicitado100ms y el mismo mapping
+  abierto desde antes de recrear Cortex:
+
+| Campo | Antes | Después |
+|---|---:|---:|
+| Head publicado | 55908 | 63866 |
+| Envíos MyCNet acumulados | 43550 | 83360 |
+| Inode SHM | 25 | 25 |
+| PID MyCNet | 1759643 | 1759643 |
+
+No se observaron retrocesos de head; fuente conectada al inicio y al final.
+Son observaciones de transporte/aplicación, no medidas de latencia por evento,
+fase, frecuencia o resonancia física.
+
+La continuidad aquí depende de conservar el objeto POSIX (el productor actual
+cierra, pero no hace unlink al salir). No cubre borrado manual/reemplazo de SHM,
+lectura sin pérdida si se sobrescribe capacidad, persistencia a reinicio del host,
+sincronización del reloj distribuido ni las rutas SatelliteSync/BoundaryPacket.

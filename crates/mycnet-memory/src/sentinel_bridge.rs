@@ -127,9 +127,12 @@ impl SentinelFractalBridge {
 
         let header = unsafe { &*(self.ptr as *const FractalRingHeader) };
         let head = header.head.load(Ordering::Acquire);
-        let tail = self.last_tail;
-
-        if head <= tail { return Vec::new(); }
+        // A reset cannot leave this reader waiting for the old cursor forever.
+        let tail = if head < self.last_tail { 0 } else { self.last_tail };
+        // Slots older than this window were overwritten; never replay their
+        // replacements at obsolete sequence positions.
+        let tail = tail.max(head.saturating_sub(FRACTAL_SEEDS_CAPACITY as u64));
+        if head == tail { return Vec::new(); }
 
         let available = (head - tail) as usize;
         let count = available.min(max_seeds).min(FRACTAL_SEEDS_CAPACITY);
@@ -429,6 +432,72 @@ impl Drop for SentinelBridge {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fractal_test_ring() -> SentinelFractalBridge {
+        let size = std::mem::size_of::<FractalRingHeader>()
+            + FRACTAL_SEEDS_CAPACITY * std::mem::size_of::<HolographicSeedBinary>();
+        let mapping = unsafe {
+            libc::mmap(ptr::null_mut(), size, libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_SHARED | libc::MAP_ANONYMOUS, -1, 0)
+        };
+        assert_ne!(mapping, libc::MAP_FAILED);
+        unsafe {
+            ptr::write(mapping.cast::<FractalRingHeader>(), FractalRingHeader {
+                magic: 0x5346_5231, version: 1,
+                head: AtomicU64::new(0), tail: AtomicU64::new(0), reserved: [0; 40],
+            });
+        }
+        SentinelFractalBridge {
+            name: "anonymous-test-ring".into(), shm_size: size,
+            ptr: mapping.cast(), fd: -1, last_tail: 0,
+        }
+    }
+
+    fn publish_test_seed(bridge: &SentinelFractalBridge, token: u32) {
+        let header = unsafe { &*bridge.ptr.cast::<FractalRingHeader>() };
+        let head = header.head.load(Ordering::Acquire);
+        let slot = (head % FRACTAL_SEEDS_CAPACITY as u64) as usize;
+        let seed = HolographicSeedBinary::new(token, 0, 0, 0, i64::from(token), 0, 10, 1);
+        unsafe {
+            let base = bridge.ptr.add(std::mem::size_of::<FractalRingHeader>())
+                .cast::<HolographicSeedBinary>();
+            ptr::write(base.add(slot), seed);
+        }
+        header.head.store(head + 1, Ordering::Release);
+    }
+
+    #[test]
+    fn fractal_reader_retains_order_after_producer_overruns_capacity() {
+        let mut bridge = fractal_test_ring();
+        for token in 0..FRACTAL_SEEDS_CAPACITY as u32 + 40 {
+            publish_test_seed(&bridge, token);
+        }
+        let first = bridge.poll_new_seeds(32);
+        assert_eq!(first.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
+            (40..72).collect::<Vec<_>>());
+        let rest = bridge.poll_new_seeds(FRACTAL_SEEDS_CAPACITY);
+        assert_eq!(rest.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
+            (72..FRACTAL_SEEDS_CAPACITY as u32 + 40).collect::<Vec<_>>());
+        assert!(bridge.poll_new_seeds(32).is_empty());
+        publish_test_seed(&bridge, 2000);
+        assert_eq!(bridge.poll_new_seeds(32)[0].token_id, 2000);
+    }
+
+    #[test]
+    fn fractal_reader_recovers_immediately_when_head_moves_backwards() {
+        let mut bridge = fractal_test_ring();
+        for token in 0..80 {
+            publish_test_seed(&bridge, token);
+        }
+        bridge.poll_new_seeds(80);
+        let header = unsafe { &*bridge.ptr.cast::<FractalRingHeader>() };
+        header.head.store(0, Ordering::Release);
+        assert!(bridge.poll_new_seeds(32).is_empty());
+        publish_test_seed(&bridge, 9000);
+        let seeds = bridge.poll_new_seeds(32);
+        assert_eq!(seeds.iter().map(|seed| seed.token_id).collect::<Vec<_>>(), [9000]);
+        assert!(bridge.poll_new_seeds(32).is_empty());
+    }
 
     #[test]
     fn sentinel_oscillator_is_192_bytes() {
