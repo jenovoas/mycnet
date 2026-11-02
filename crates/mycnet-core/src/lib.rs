@@ -8,9 +8,11 @@
 
 pub mod adm;
 pub mod mesh;
+pub mod predict;
 pub mod s60;
 pub mod yhwh;
 
 pub use s60::{SPA, HolographicSeedBinary, compute_crc16};
 pub use adm::{ADM, MycNode, AxialCoord};
 pub use mesh::{MeshState, Neighbor, PhysicalNode, FractalMeshPacket, FRACTAL_PACKET_MAGIC, FRACTAL_PROTOCOL_VERSION};
+pub use predict::SendWindow;
