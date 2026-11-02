@@ -14,8 +14,10 @@ use mycnet_core::{ADM, MeshState, PhysicalNode, SPA};
 use mycnet_core::s60::HolographicSeedBinary;
 use mycnet_core::mesh::{get_local_neighbors, mesh_coherence};
 use mycnet_core::yhwh::YhwhPhase;
+use mycnet_memory::holographic_sync::{HolographicSeed, HolographicSyncEngine};
 use mycnet_memory::lattice::{Coord, LiquidLattice};
 use mycnet_memory::sentinel_bridge::{SentinelBridge, SentinelFractalBridge};
+use mycnet_memory::storage::ResonantStore;
 
 /// Cadencia de refresco desde el lattice fonónico de sentinel:
 /// cada 17 ticks = ~405 ms @ 42 Hz = el Salto-17 soberano de Plimpton.
@@ -41,8 +43,9 @@ pub struct AppState {
     pub fractal_seeds_ingested: AtomicU64,
     pub fractal_seeds_ingested_from_peer: AtomicU64,
     /// TQ observado por peer (addr string → (raw S60, tick)), refresco Salto-17.
-    /// Evita invocar batctl por peer a 41 Hz; el loop de envío lo puebla.
     pub peer_tq_cache: Mutex<std::collections::HashMap<String, (i64, u64)>>,
+    /// Almacén resonante local (memoria colectiva KV por simpatía, EXP-002).
+    pub kv_store: Mutex<ResonantStore>,
 }
 impl AppState {
     pub fn new(tx: broadcast::Sender<String>, metrics_peer: Option<SocketAddr>) -> Self {
@@ -92,6 +95,11 @@ impl AppState {
             }
         };
 
+        // satellite_id = último octeto de la IP bat (1-6). Definido antes
+        // de mover bat_ip al struct.
+        let satellite_id: u8 = bat_ip.rsplit('.').next()
+            .and_then(|o| o.parse().ok()).unwrap_or(0);
+
         Self {
             adm: Mutex::new(adm),
             tx,
@@ -106,6 +114,8 @@ impl AppState {
             fractal_seeds_ingested: AtomicU64::new(0),
             fractal_seeds_ingested_from_peer: AtomicU64::new(0),
             peer_tq_cache: Mutex::new(std::collections::HashMap::new()),
+            // Anillos 3 = 37 nodos (igual que lattice espejo).
+            kv_store: Mutex::new(ResonantStore::new(satellite_id, SENTINEL_LATTICE_RINGS)),
         }
     }
 
@@ -285,6 +295,21 @@ impl AppState {
     ) -> std::result::Result<Coord, &'static str> {
         let mut lattice = self.lattice.lock().await;
         let coord = lattice.inject_fractal_seed(&seed)?;
+        drop(lattice);
+        // Memoria colectiva (EXP-002): la semilla alimenta el ResonantStore
+        // local además del lattice. Sin duplicar lógica: expand_seed = put.
+        {
+            use mycnet_memory::holographic_sync::HolographicSeed as HS;
+            let hs = HS {
+                key: seed.token_id.to_le_bytes().to_vec(),
+                amplitude: mycnet_core::s60::SPA::from_raw(seed.amplitude_s60),
+                phase_sector: seed.phase_sector,
+                pulse_period: seed.yhwh_pulse as u32,
+                seed_bytes: seed.to_bytes().to_vec(),
+            };
+            let mut store = self.kv_store.lock().await;
+            HolographicSyncEngine::expand_seed(&mut store, &hs);
+        }
         self.fractal_seeds_ingested
             .fetch_add(1, AtomicOrdering::Relaxed);
         if self.metrics_peer == Some(source) {
