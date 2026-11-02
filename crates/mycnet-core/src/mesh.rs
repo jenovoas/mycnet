@@ -184,6 +184,31 @@ pub fn parse_batctl_snapshot(output: &str) -> Result<Vec<Neighbor>, MeshError> {
     }
     Ok(neighbors)
 }
+/// Parsea `vxlan-remotes` (`iface ip` por línea). Generado por
+/// mycnet-batctl-snapshot.sh junto al snapshot batman.
+pub fn parse_vxlan_remotes(output: &str) -> std::collections::BTreeMap<String, String> {
+    let mut map = std::collections::BTreeMap::new();
+    for line in output.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 {
+            map.insert(parts[1].to_string(), parts[0].to_string());
+        }
+    }
+    map
+}
+
+/// TQ S60 real del peer por IP WireGuard: IP → iface → vecino → TQ.
+/// None si no hay ruta (el llamador retiene en ring local).
+pub fn tq_for_peer_ip(
+    neighbors: &[Neighbor],
+    vxlan_map: &std::collections::BTreeMap<String, String>,
+    peer_ip: &str,
+) -> Option<SPA> {
+    let ip = peer_ip.split(':').next().unwrap_or(peer_ip);
+    let iface = vxlan_map.get(ip)?;
+    neighbors.iter().find(|n| &n.iface == iface).map(|n| n.tq_s60)
+}
+
 
 /// Parsea la tabla de originadores de `batctl o`.
 ///

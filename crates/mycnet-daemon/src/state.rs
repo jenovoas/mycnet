@@ -246,31 +246,25 @@ impl AppState {
                 .as_secs(),
         }
     }
-    /// TQ S60 observado del peer (para ventana predictiva OU).
-    /// Lee batctl como máximo cada 17 ticks (Salto-17); entremedio usa caché.
-    /// None si el peer no aparece en el mesh (se envía igual: fallback a ciego).
+    /// TQ S60 real del peer por su IP WireGuard (mapeo IP→iface→MAC→TQ).
+    /// Lee snapshots cada 17 ticks (Salto-17); entremedio usa caché.
+    /// None si no hay ruta: el llamador retiene en ring local.
     pub async fn peer_tq(&self, peer: SocketAddr, tick: u64) -> Option<SPA> {
+        use mycnet_core::mesh::{parse_batctl_snapshot, parse_vxlan_remotes, tq_for_peer_ip};
         use mycnet_core::s60::SPA;
         let key = peer.to_string();
-        // Caché vigente 17 ticks.
         if let Some((raw, at)) = self.peer_tq_cache.lock().await.get(&key) {
             if tick.saturating_sub(*at) < 17 {
                 return Some(SPA::from_raw(*raw));
             }
         }
-        // Refresca desde batctl (caro: solo cada 17 ticks por peer).
-        let neighbors = get_local_neighbors().await.unwrap_or_default();
-        // El peer UDP es 10.88.0.x:4242; el vecino batman se identifica por MAC,
-        // no por IP. Sin mapeo IP→MAC fiable, usa coherencia media del mesh
-        // como proxy conservador del peer (igual que mesh_coherence()).
-        // TODO: mapear IP WG → MAC batman vía tabla ARP/neigh para TQ por peer real.
-        let coh = mesh_coherence(&neighbors);
-        self.peer_tq_cache.lock().await.insert(key, (coh.to_raw(), tick));
-        if neighbors.is_empty() {
-            None
-        } else {
-            Some(coh)
-        }
+        let snap = std::fs::read_to_string("/run/mycnet/batctl-originators").ok()?;
+        let vx = std::fs::read_to_string("/run/mycnet/vxlan-remotes").ok()?;
+        let neighbors = parse_batctl_snapshot(&snap).ok()?;
+        let vxmap = parse_vxlan_remotes(&vx);
+        let tq = tq_for_peer_ip(&neighbors, &vxmap, &peer.ip().to_string())?;
+        self.peer_tq_cache.lock().await.insert(key, (tq.to_raw(), tick));
+        Some(tq)
     }
 
 
