@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use tokio::sync::{Mutex, broadcast};
 use tracing::{info, warn};
 
-use mycnet_core::{ADM, MeshState, PhysicalNode};
+use mycnet_core::{ADM, MeshState, PhysicalNode, SPA};
 use mycnet_core::s60::HolographicSeedBinary;
 use mycnet_core::mesh::{get_local_neighbors, mesh_coherence};
 use mycnet_core::yhwh::YhwhPhase;
@@ -40,8 +40,10 @@ pub struct AppState {
     pub fractal_packets_sent_to_peer: AtomicU64,
     pub fractal_seeds_ingested: AtomicU64,
     pub fractal_seeds_ingested_from_peer: AtomicU64,
+    /// TQ observado por peer (addr string → (raw S60, tick)), refresco Salto-17.
+    /// Evita invocar batctl por peer a 41 Hz; el loop de envío lo puebla.
+    pub peer_tq_cache: Mutex<std::collections::HashMap<String, (i64, u64)>>,
 }
-
 impl AppState {
     pub fn new(tx: broadcast::Sender<String>, metrics_peer: Option<SocketAddr>) -> Self {
         let mut adm = ADM::new();
@@ -103,6 +105,7 @@ impl AppState {
             fractal_packets_sent_to_peer: AtomicU64::new(0),
             fractal_seeds_ingested: AtomicU64::new(0),
             fractal_seeds_ingested_from_peer: AtomicU64::new(0),
+            peer_tq_cache: Mutex::new(std::collections::HashMap::new()),
         }
     }
 
@@ -243,6 +246,33 @@ impl AppState {
                 .as_secs(),
         }
     }
+    /// TQ S60 observado del peer (para ventana predictiva OU).
+    /// Lee batctl como máximo cada 17 ticks (Salto-17); entremedio usa caché.
+    /// None si el peer no aparece en el mesh (se envía igual: fallback a ciego).
+    pub async fn peer_tq(&self, peer: SocketAddr, tick: u64) -> Option<SPA> {
+        use mycnet_core::s60::SPA;
+        let key = peer.to_string();
+        // Caché vigente 17 ticks.
+        if let Some((raw, at)) = self.peer_tq_cache.lock().await.get(&key) {
+            if tick.saturating_sub(*at) < 17 {
+                return Some(SPA::from_raw(*raw));
+            }
+        }
+        // Refresca desde batctl (caro: solo cada 17 ticks por peer).
+        let neighbors = get_local_neighbors().await.unwrap_or_default();
+        // El peer UDP es 10.88.0.x:4242; el vecino batman se identifica por MAC,
+        // no por IP. Sin mapeo IP→MAC fiable, usa coherencia media del mesh
+        // como proxy conservador del peer (igual que mesh_coherence()).
+        // TODO: mapear IP WG → MAC batman vía tabla ARP/neigh para TQ por peer real.
+        let coh = mesh_coherence(&neighbors);
+        self.peer_tq_cache.lock().await.insert(key, (coh.to_raw(), tick));
+        if neighbors.is_empty() {
+            None
+        } else {
+            Some(coh)
+        }
+    }
+
 
     /// Registra un datagrama solo después de que `send_to` tuvo éxito.
     pub fn record_fractal_packet_sent(&self, peer: SocketAddr) {

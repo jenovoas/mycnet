@@ -65,6 +65,11 @@ pub async fn start_mesh_udp(
     tokio::spawn(async move {
         let mut ticker = interval(Duration::from_nanos(23_939_835)); // 41.77 Hz
         let mut sequence_id: u16 = 0;
+        // Ventana OU por peer: predice coherencia del vecino y retiene
+        // en ring local cuando la ventana es mala (no-Markoviano real,
+        // no broadcast ciego). Una ventana por SocketAddr.
+        let mut windows: std::collections::HashMap<SocketAddr, mycnet_core::predict::SendWindow> =
+            std::collections::HashMap::new();
 
         loop {
             ticker.tick().await;
@@ -75,10 +80,20 @@ pub async fn start_mesh_udp(
                 let bytes = packet.to_bytes();
 
                 for peer in &peers {
-                    match send_socket.send_to(&bytes, peer).await {
-                        Ok(_) => send_state.record_fractal_packet_sent(*peer),
-                        Err(e) => {
-                            debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
+                    // Actualiza ventana con TQ observado del mesh (si existe).
+                    let tq = send_state.peer_tq(*peer, sequence_id as u64).await;
+                    let win = windows.entry(*peer).or_default();
+                    if let Some(coh) = tq {
+                        win.record(sequence_id as i64, coh);
+                    }
+                    // Envía solo si la ventana predice coherencia; si no,
+                    // la semilla queda en el ring local (no se pierde).
+                    if win.is_empty() || win.should_send(sequence_id as i64, 10) {
+                        match send_socket.send_to(&bytes, peer).await {
+                            Ok(_) => send_state.record_fractal_packet_sent(*peer),
+                            Err(e) => {
+                                debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
+                            }
                         }
                     }
                 }
