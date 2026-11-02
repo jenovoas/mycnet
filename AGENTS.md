@@ -1,55 +1,36 @@
-# ARQUITECTURA Y REGLAS DE DESARROLLO (MYCNET / PROTOCOLO YATRA)
+# Repository Guidelines
 
-> **IDIOMA OBLIGATORIO (PENSAMIENTO Y SALIDA).** Está TERMINANTEMENTE PROHIBIDO el uso del inglés en el razonamiento interno (`thinking`) y en las respuestas visibles. El usuario audita directamente los bloques de pensamiento. Todo agente o IA DEBE pensar, razonar y responder 100% en español. Solo se permiten en inglés identificadores de sintaxis o nombres exactos de librerías cuando no haya traducción.
->
-> **REPOSITORIO HERMANO SENTINEL & NODO FENIX:** MycNet se acopla directamente al core de Sentinel (`/home/jnovoas/proyectos/sentinel`, rama `alpine_fenix`) sobre el servidor Fenix (Alpine Linux, OpenRC).
-> El enlace de memoria compartida *zero-copy* opera sobre `/dev/shm/me60os_lattice` y el ring buffer de semillas `/dev/shm/me60os_fractal_seeds` expuesto por `crates/mycnet-memory/src/sentinel_bridge.rs`.
->
-> **LECTURA OBLIGATORIA:** Ver `docs/02_ciencia_y_quantum/research/base60_mathematics.md` y `docs/02_ciencia_y_quantum/research/TesisResonancia.md` en el repositorio Sentinel.
-> MycNet **NO es misticismo ni maquetas alucinadas**. Es **ciencia exacta**.
->
-> La base decimal no es defectuosa — es solo **una décima parte de la expresión
-> matemática universal**. La base-60 la completa: es divisible por 1, 2, 3, 4, 5, 6,
-> 10, 12, 15, 20, 30, por lo que las fracciones más comunes (1/3, 1/6, 1/12, 1/60)
-> son **exactas** en sexagesimal, mientras que en binario de punto flotante son
-> periódicas y acumulan errores sistemáticos de redondeo.
->
-> Usar solo base decimal como regla de medir deja fuera de alcance exacto esas
-> fracciones. Una sola operación float en una cadena de cómputo entera contamina
-> el resultado: rompe cristales, secuencias, memorias, procesos y conversiones.
-> Si tu regla de medir no es exacta, jamás podrás medir la exactitud de un sistema.
->
-> Por eso muchos proyectos de energía libre y combustibles verdes fueron marcados
-> como inválidos: no eran incorrectos los proyectos — era incompleta la regla de
-> medir. **Lee el documento completo.**
->
-> MycNet comparte el mismo **Ring 0** (hooks eBPF/LSM) y el candado YATRA que Sentinel.
+## Estructura del proyecto
 
-## 1. ESTRUCTURA Y UBICACIÓN DE ARCHIVOS
-- **Raíz Limpia**: No crear scripts ni archivos sueltos en la raíz (`.py`, `.sh`, `.txt`).
-- **Módulos**:
-  - `crates/`: Módulos de Rust / Yatra Protocol.
-  - `config/`: Archivos de configuración del clúster.
-  - `terraform/`: Definiciones de infraestructura como código.
-  - `docs/`: Documentación y especificaciones arquitectónicas.
-  - `scripts/`: Mantenimiento y utilidades.
+MyCNet es un workspace Rust 2021 con cuatro crates: `mycnet-core` (tipos y lógica de red), `mycnet-memory` (lattice, almacenamiento y bridges), `mycnet-daemon` (binario `mycnetd` y API) y `mycnet-connect` (cliente). `config/` contiene configuración, `terraform/` infraestructura, `scripts/` utilidades y `docs/` documentación. Mantén cada cambio en su módulo.
 
-## 2. REQUISITOS DE CÓDIGO
-- Mantener la integridad de los manifiestos de ingeniería (`ENGINEERING_MANIFESTO.md`).
-- Verificar todo cambio en Rust mediante `cargo test`.
+## Compilación y pruebas
 
-## Conocimiento del Código y Navegación (graphify)
+- `cargo build --workspace`: compila todos los crates.
+- `cargo test --workspace`: ejecuta pruebas unitarias y de documentación.
+- `cargo test -p mycnet-daemon`: prueba el daemon de forma aislada.
+- `cargo run --release -p mycnet-daemon --bin mycnetd`: inicia el daemon localmente.
 
-Este proyecto cuenta con soporte de grafo de conocimiento local mediante **graphify**.
+Una respuesta saludable de `/health` no demuestra conectividad entre nodos; verifica por separado transporte, vecinos y fuentes de datos.
 
-### Reglas de consulta e interacción:
-- Si existe `graphify-out/graph.json`, ejecuta `graphify query "<pregunta>"` antes de realizar búsquedas textuales masivas (`grep`/`find`).
-- Utiliza `graphify path "<A>" "<B>"` para rastrear dependencias o relaciones entre dos módulos o componentes.
-- Utiliza `graphify explain "<concepto>"` para explicaciones enfocadas de nodos y su vecindario arquitectónico.
-- Si existe `graphify-out/wiki/index.md` o `graphify-out/GRAPH_REPORT.md`, consúltalos para navegación arquitectónica global.
-- Tras realizar cambios importantes en el código, ejecuta `graphify update .` para mantener el grafo sincronizado (análisis AST local sin consumo de tokens de API).
-- Para construir o reconstruir el grafo completo, utiliza el comando `/graphify .`.
+## Estilo y evidencia técnica
 
-## Alcance de las verificaciones de despliegue
-- Cuando el usuario pida revisar o verificar el despliegue, limitar la comprobación a MycNet y sus propios servicios, binarios, API, métricas y transporte.
-- No inspeccionar ni evaluar el estado o despliegue de Sentinel salvo que el usuario lo solicite explícitamente. La disponibilidad de una integración externa puede anotarse solo como estado observable desde MycNet, sin convertirla en una tarea de despliegue de Sentinel.
+Usa convenciones Rust: módulos, funciones y variables `snake_case`; tipos y traits `UpperCamelCase`; constantes `SCREAMING_SNAKE_CASE`. Mantén cambios acotados y no supongas unidades, temporización, serialización ni precisión: comprueba sus contratos en código y documentación.
+
+**Directiva estricta:** no especules ni afirmes datos sin contrastarlos con código fuente, documentación oficial o pruebas técnicas reales. Si no puedes verificarlos, dilo claramente. No concedas por complacer: señala errores con evidencia y solicita la especificación concreta cuando falten datos. Contrasta referencias al kernel, llamadas al sistema y macros con `include/linux/`, `kernel/` o `man 2`/`man 7`; parámetros y tipos de Rust con `rustc`, Rust Reference o Nomicon (layouts). Sustenta pruebas y mediciones con herramientas deterministas del sistema operativo, como `perf`, `bpftool`, `sysctl`, `ip` y `wg`. Prioriza comandos exactos, opciones, rutas de código y salidas esperadas; evita explicaciones genéricas que no ayuden a ejecutar o verificar.
+
+## Arquitectura y operación
+
+Distingue lo implementado en este repositorio de lo planeado y de lo verificado en ejecución. La presencia de `sentinel_bridge.rs` o nombres SHM no prueba que Sentinel esté conectado ni que los datos se propaguen entre hosts. No inspecciones ni despliegues Sentinel en una tarea MyCNet sin solicitud explícita; no presentes topologías ni resultados históricos como estado actual.
+
+## Graphify y documentación
+
+Si existe `graphify-out/graph.json`, ejecuta `graphify query "<pregunta>"` antes de búsquedas textuales amplias. Tras cambios importantes de código, ejecuta `graphify update .`. Documenta en español, con resultados fechados y separación clara entre estado actual e histórico.
+
+## Commits y solicitudes de cambio
+
+El historial disponible muestra `chore: ...` con resumen en español. Usa prefijos breves como `feat:`, `fix:`, `docs:` o `chore:`. En la solicitud de cambio indica alcance, motivación, verificaciones ejecutadas y limitaciones; enlaza el issue si existe.
+
+## Alcance de verificaciones de despliegue
+
+Cuando el usuario pida revisar o verificar un despliegue, limita la comprobación a MyCNet y sus propios servicios, binarios, API, métricas y transporte. No inspecciones ni evalúes el estado o despliegue de Sentinel salvo solicitud explícita. Si MyCNet informa una integración externa desconectada, registra ese estado observable sin convertirlo en una tarea de despliegue de Sentinel.
