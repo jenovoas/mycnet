@@ -14,7 +14,7 @@ use mycnet_core::{ADM, MeshState, PhysicalNode, SPA};
 use mycnet_core::s60::HolographicSeedBinary;
 use mycnet_core::mesh::{get_local_neighbors, mesh_coherence};
 use mycnet_core::yhwh::YhwhPhase;
-use mycnet_memory::holographic_sync::{HolographicSeed, HolographicSyncEngine};
+use mycnet_memory::holographic_sync::HolographicSyncEngine;
 use mycnet_memory::lattice::{Coord, LiquidLattice};
 use mycnet_memory::sentinel_bridge::{SentinelBridge, SentinelFractalBridge};
 use mycnet_memory::storage::ResonantStore;
@@ -256,16 +256,15 @@ impl AppState {
                 .as_secs(),
         }
     }
-    /// TQ S60 real del peer por su IP WireGuard (mapeo IP→iface→MAC→TQ).
-    /// Lee snapshots cada 17 ticks (Salto-17); entremedio usa caché.
-    /// None si no hay ruta: el llamador retiene en ring local.
-    pub async fn peer_tq(&self, peer: SocketAddr, tick: u64) -> Option<SPA> {
+
+    /// Devuelve TQ y el tick de la observación original para no contar caché
+    /// como nuevas muestras en los consumidores temporales.
+    pub async fn peer_tq_observation(&self, peer: SocketAddr, tick: u64) -> Option<(SPA, u64)> {
         use mycnet_core::mesh::{parse_batctl_snapshot, parse_vxlan_remotes, tq_for_peer_ip};
-        use mycnet_core::s60::SPA;
         let key = peer.to_string();
         if let Some((raw, at)) = self.peer_tq_cache.lock().await.get(&key) {
             if tick.saturating_sub(*at) < 17 {
-                return Some(SPA::from_raw(*raw));
+                return Some((SPA::from_raw(*raw), *at));
             }
         }
         let snap = std::fs::read_to_string("/run/mycnet/batctl-originators").ok()?;
@@ -274,7 +273,7 @@ impl AppState {
         let vxmap = parse_vxlan_remotes(&vx);
         let tq = tq_for_peer_ip(&neighbors, &vxmap, &peer.ip().to_string())?;
         self.peer_tq_cache.lock().await.insert(key, (tq.to_raw(), tick));
-        Some(tq)
+        Some((tq, tick))
     }
 
 
@@ -328,11 +327,15 @@ impl AppState {
         Ok(coord)
     }
 
-    /// Sondea semillas nuevas generadas por Sentinel en SHM para difundirlas a la red mesh.
-    pub async fn poll_local_fractal_seeds(&self) -> Vec<HolographicSeedBinary> {
+
+    /// Consume como máximo `limit` entradas para permitir backpressure antes de avanzar el cursor.
+    pub async fn poll_local_fractal_seeds_bounded(&self, limit: usize) -> Vec<HolographicSeedBinary> {
+        if limit == 0 {
+            return Vec::new();
+        }
         let mut bridge_guard = self.fractal_bridge.lock().await;
-        if let Some(ref mut bridge) = *bridge_guard {
-            let seeds = bridge.poll_new_seeds(32);
+        if let Some(bridge) = &mut *bridge_guard {
+            let seeds = bridge.poll_new_seeds(limit);
             if !seeds.is_empty() {
                 let mut lattice = self.lattice.lock().await;
                 for seed in &seeds {

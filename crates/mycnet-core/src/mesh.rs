@@ -184,8 +184,8 @@ pub fn parse_batctl_snapshot(output: &str) -> Result<Vec<Neighbor>, MeshError> {
     }
     Ok(neighbors)
 }
-/// Parsea `vxlan-remotes` (`iface ip` por línea). Generado por
-/// mycnet-batctl-snapshot.sh junto al snapshot batman.
+/// Parsea `vxlan-remotes` (`iface ip` por línea), exportado desde las interfaces
+/// VXLAN configuradas en el kernel por `mycnet-batctl-snapshot.sh`.
 pub fn parse_vxlan_remotes(output: &str) -> std::collections::BTreeMap<String, String> {
     let mut map = std::collections::BTreeMap::new();
     for line in output.lines() {
@@ -385,6 +385,35 @@ vxmc3          aa:00:00:00:00:03    0.500s
             last_seen_ms: 100,
         };
         assert_eq!(n.tq_s60, SPA::one());
+    }
+
+    #[test]
+    fn vxlan_remote_contract_maps_configured_peer_and_omits_unknown_peer() {
+        let remotes = parse_vxlan_remotes(
+            "vxlan0 10.88.0.2\nvxlan-peer2 10.88.0.3\n",
+        );
+        let neighbors = vec![
+            Neighbor {
+                mac: "aa:00:00:00:00:02".into(),
+                iface: "vxlan0".into(),
+                tq: 250,
+                tq_s60: SPA::from_tq(250),
+                last_seen_ms: 0,
+            },
+            Neighbor {
+                mac: "aa:00:00:00:00:03".into(),
+                iface: "vxlan-peer2".into(),
+                tq: 180,
+                tq_s60: SPA::from_tq(180),
+                last_seen_ms: 0,
+            },
+        ];
+
+        assert_eq!(
+            tq_for_peer_ip(&neighbors, &remotes, "10.88.0.3"),
+            Some(SPA::from_tq(180))
+        );
+        assert_eq!(tq_for_peer_ip(&neighbors, &remotes, "10.88.0.99"), None);
     }
 
     #[test]

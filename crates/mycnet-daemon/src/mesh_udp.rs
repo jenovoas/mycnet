@@ -6,6 +6,7 @@
 //! Encapsula y distribuye datagramas `FractalMeshPacket` (40B) a través de la
 //! red mesh (WireGuard / VXLAN / batman-adv) hacia todos los peers configurados.
 
+use std::collections::{HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
@@ -13,6 +14,36 @@ use tokio::time::{interval, Duration};
 use tracing::{debug, error, info, warn};
 use mycnet_core::mesh::FractalMeshPacket;
 use crate::state::AppState;
+
+const MAX_PENDING_SEEDS_PER_PEER: usize = 256;
+
+#[derive(Clone)]
+struct PendingPacket {
+    sequence_id: u16,
+    bytes: [u8; 40],
+}
+
+fn poll_capacity(peers: &[SocketAddr], pending: &HashMap<SocketAddr, VecDeque<PendingPacket>>) -> usize {
+    peers.iter()
+        .map(|peer| MAX_PENDING_SEEDS_PER_PEER.saturating_sub(pending.get(peer).map_or(0, VecDeque::len)))
+        .min()
+        .unwrap_or(0)
+}
+
+fn window_allows_send(
+    window: &mut mycnet_core::predict::SendWindow,
+    tick: u64,
+    observation: Option<(mycnet_core::s60::SPA, u64)>,
+    last_observation_tick: &mut Option<u64>,
+) -> bool {
+    if let Some((coherence, observed_at)) = observation {
+        if (*last_observation_tick).map_or(true, |last| observed_at > last) {
+            window.record(observed_at as i64, coherence);
+            *last_observation_tick = Some(observed_at);
+        }
+    }
+    window.is_empty() || window.should_send(tick as i64, 10)
+}
 
 // Hercules/Ocean son DMZ de cara al exterior, no peers privados de solo envío.
 // La restricción de ingreso público se aplica en firewall/VPN, no suprimiendo
@@ -65,35 +96,54 @@ pub async fn start_mesh_udp(
     tokio::spawn(async move {
         let mut ticker = interval(Duration::from_nanos(23_939_835)); // 41.77 Hz
         let mut sequence_id: u16 = 0;
-        // Ventana OU por peer: predice coherencia del vecino y retiene
-        // en ring local cuando la ventana es mala (no-Markoviano real,
-        // no broadcast ciego). Una ventana por SocketAddr.
-        let mut windows: std::collections::HashMap<SocketAddr, mycnet_core::predict::SendWindow> =
-            std::collections::HashMap::new();
+        let mut logical_tick = 0u64;
+        let mut windows: HashMap<SocketAddr, mycnet_core::predict::SendWindow> = HashMap::new();
+        let mut last_observation_tick: HashMap<SocketAddr, Option<u64>> = HashMap::new();
+        let mut pending: HashMap<SocketAddr, VecDeque<PendingPacket>> = peers
+            .iter()
+            .map(|peer| (*peer, VecDeque::new()))
+            .collect();
 
         loop {
             ticker.tick().await;
-            let seeds = send_state.poll_local_fractal_seeds().await;
-            for seed in seeds {
-                sequence_id = sequence_id.wrapping_add(1);
-                let packet = FractalMeshPacket::new(sequence_id, seed);
-                let bytes = packet.to_bytes();
+            logical_tick = logical_tick.wrapping_add(1);
 
-                for peer in &peers {
-                    // Actualiza ventana con TQ observado del mesh (si existe).
-                    let tq = send_state.peer_tq(*peer, sequence_id as u64).await;
-                    let win = windows.entry(*peer).or_default();
-                    if let Some(coh) = tq {
-                        win.record(sequence_id as i64, coh);
+            // Poll consumes ring entries, so never poll more than every peer
+            // can retain. A full queue stalls polling/cursor advancement.
+            let room = poll_capacity(&peers, &pending).min(32);
+            if room > 0 {
+                let seeds = send_state.poll_local_fractal_seeds_bounded(room).await;
+                for seed in seeds {
+                    sequence_id = sequence_id.wrapping_add(1);
+                    let packet = FractalMeshPacket::new(sequence_id, seed);
+                    let queued = PendingPacket {
+                        sequence_id,
+                        bytes: packet.to_bytes(),
+                    };
+                    for queue in pending.values_mut() {
+                        queue.push_back(queued.clone());
                     }
-                    // Envía solo si la ventana predice coherencia; si no,
-                    // la semilla queda en el ring local (no se pierde).
-                    if win.is_empty() || win.should_send(sequence_id as i64, 10) {
-                        match send_socket.send_to(&bytes, peer).await {
-                            Ok(_) => send_state.record_fractal_packet_sent(*peer),
-                            Err(e) => {
-                                debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer");
-                            }
+                }
+            }
+
+            for peer in &peers {
+                let queue = pending.get_mut(peer).expect("peer queue initialized");
+                while let Some(packet) = queue.front() {
+                    let observation = send_state.peer_tq_observation(*peer, logical_tick).await;
+                    let win = windows.entry(*peer).or_default();
+                    let last_observed = last_observation_tick.entry(*peer).or_default();
+                    // Cached TQ carries its original sample tick; only fresh observations enter the OU history.
+                    if !window_allows_send(win, logical_tick, observation, last_observed) {
+                        break;
+                    }
+                    match send_socket.send_to(&packet.bytes, peer).await {
+                        Ok(_) => {
+                            send_state.record_fractal_packet_sent(*peer);
+                            queue.pop_front();
+                        }
+                        Err(e) => {
+                            debug!(peer = %peer, error = %e, "Fallo al enviar paquete fractal a peer; pendiente conservado");
+                            break;
                         }
                     }
                 }
@@ -110,6 +160,83 @@ mod tests {
     use mycnet_core::s60::HolographicSeedBinary;
     use std::sync::atomic::Ordering;
     use tokio::sync::broadcast;
+
+    #[test]
+    fn full_peer_queue_stalls_polling_and_retains_head_until_success() {
+        let peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
+        let mut pending = HashMap::from([(peer, VecDeque::new())]);
+        pending.get_mut(&peer).unwrap().push_back(PendingPacket {
+            sequence_id: 7,
+            bytes: [7; 40],
+        });
+
+        assert_eq!(poll_capacity(&[peer], &pending), MAX_PENDING_SEEDS_PER_PEER - 1);
+        while pending.get(&peer).unwrap().len() < MAX_PENDING_SEEDS_PER_PEER {
+            pending.get_mut(&peer).unwrap().push_back(PendingPacket {
+                sequence_id: 8,
+                bytes: [8; 40],
+            });
+        }
+        assert_eq!(poll_capacity(&[peer], &pending), 0);
+        assert_eq!(pending[&peer].front().unwrap().sequence_id, 7);
+        pending.get_mut(&peer).unwrap().pop_front();
+        assert_eq!(pending[&peer].front().unwrap().sequence_id, 8);
+    }
+
+    #[test]
+    fn rejected_window_keeps_seed_pending() {
+        let peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
+        let mut pending = HashMap::from([(peer, VecDeque::new())]);
+        pending.get_mut(&peer).unwrap().push_back(PendingPacket {
+            sequence_id: 9,
+            bytes: [9; 40],
+        });
+        let mut window = mycnet_core::predict::SendWindow::new();
+        window.record(9, mycnet_core::s60::SPA::zero());
+
+        assert!(!window.should_send(9, 10));
+        assert_eq!(pending[&peer].front().unwrap().sequence_id, 9);
+    }
+
+    #[test]
+    fn retained_head_observes_tq_refresh_after_seventeen_loop_ticks_once() {
+        let peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
+        let mut pending = HashMap::from([(peer, VecDeque::from([PendingPacket {
+            sequence_id: 9,
+            bytes: [9; 40],
+        }]))]);
+        let mut window = mycnet_core::predict::SendWindow::new();
+        let mut cached_tq = mycnet_core::s60::SPA::zero();
+        let mut cache_at = 1u64;
+        let mut last_observation_tick = None;
+        let mut sends = 0;
+
+        for tick in 1u64..=40 {
+            if tick.saturating_sub(cache_at) >= 17 {
+                cache_at = tick;
+                cached_tq = mycnet_core::s60::SPA::one();
+            }
+            let queue = pending.get_mut(&peer).unwrap();
+            if queue.front().is_some()
+                && window_allows_send(
+                    &mut window,
+                    tick,
+                    Some((cached_tq, cache_at)),
+                    &mut last_observation_tick,
+                )
+            {
+                assert!(tick >= 18);
+                queue.pop_front();
+                sends += 1;
+            }
+            if tick < 18 {
+                assert_eq!(window.len(), 1, "caché no debe añadir muestras OU");
+            }
+        }
+
+        assert_eq!(sends, 1);
+        assert!(pending[&peer].is_empty());
+    }
 
     #[test]
     fn test_packet_send_metrics_are_filtered_by_peer() {
