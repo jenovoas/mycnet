@@ -137,7 +137,7 @@ impl ResonantStore {
     pub fn tick(&mut self, crystal_tick: u64) -> DiffusionStep {
         // Quantum Leap: en cada frontera de 2840 ticks (T=68s)
         // el lattice resetea la deriva de fase — "parpadeo" sin pérdida de datos
-        let is_quantum_leap = crystal_tick > 0 && crystal_tick % QUANTUM_LEAP_TICKS == 0;
+        let is_quantum_leap = crystal_tick > 0 && crystal_tick.is_multiple_of(QUANTUM_LEAP_TICKS);
         if is_quantum_leap {
             self.lattice.quantum_reset();
             self.leap_count += 1;
@@ -149,7 +149,7 @@ impl ResonantStore {
         // Bio pulse: cada 710 ticks (T=17s, primo Plimpton)
         // Inyecta micro-energía para mantener resonancia entre quantum leaps
         // Salta si es un Quantum Leap (el reset ya restaura el estado)
-        if !is_quantum_leap && crystal_tick > 0 && crystal_tick % BIO_PULSE_TICKS == 0 {
+        if !is_quantum_leap && crystal_tick > 0 && crystal_tick.is_multiple_of(BIO_PULSE_TICKS) {
             self.lattice.bio_pulse(yhwh.factor());
         }
 

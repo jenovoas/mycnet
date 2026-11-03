@@ -6,26 +6,31 @@
 //! Encapsula y distribuye datagramas `FractalMeshPacket` (40B) a través de la
 //! red mesh (WireGuard / VXLAN / batman-adv) hacia todos los peers configurados.
 
+use crate::state::AppState;
+use mycnet_core::mesh::FractalMeshPacket;
 use std::collections::{HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::time::{interval, Duration};
 use tracing::{debug, error, info, warn};
-use mycnet_core::mesh::FractalMeshPacket;
-use crate::state::AppState;
 
 const MAX_PENDING_SEEDS_PER_PEER: usize = 256;
 
 #[derive(Clone)]
 struct PendingPacket {
-    sequence_id: u16,
     bytes: [u8; 40],
 }
 
-fn poll_capacity(peers: &[SocketAddr], pending: &HashMap<SocketAddr, VecDeque<PendingPacket>>) -> usize {
-    peers.iter()
-        .map(|peer| MAX_PENDING_SEEDS_PER_PEER.saturating_sub(pending.get(peer).map_or(0, VecDeque::len)))
+fn poll_capacity(
+    peers: &[SocketAddr],
+    pending: &HashMap<SocketAddr, VecDeque<PendingPacket>>,
+) -> usize {
+    peers
+        .iter()
+        .map(|peer| {
+            MAX_PENDING_SEEDS_PER_PEER.saturating_sub(pending.get(peer).map_or(0, VecDeque::len))
+        })
         .min()
         .unwrap_or(0)
 }
@@ -37,7 +42,7 @@ fn window_allows_send(
     last_observation_tick: &mut Option<u64>,
 ) -> bool {
     if let Some((coherence, observed_at)) = observation {
-        if (*last_observation_tick).map_or(true, |last| observed_at > last) {
+        if (*last_observation_tick).is_none_or(|last| observed_at > last) {
             window.record(observed_at as i64, coherence);
             *last_observation_tick = Some(observed_at);
         }
@@ -55,7 +60,11 @@ pub async fn start_mesh_udp(
     peers: Vec<SocketAddr>,
 ) -> anyhow::Result<()> {
     let socket = Arc::new(UdpSocket::bind(bind_addr).await?);
-    info!(bind = bind_addr, peer_count = peers.len(), "Mesh UDP socket iniciado para transporte de semillas fractales");
+    info!(
+        bind = bind_addr,
+        peer_count = peers.len(),
+        "Mesh UDP socket iniciado para transporte de semillas fractales"
+    );
 
     // 1. Tarea de Recepción UDP
     let recv_socket = Arc::clone(&socket);
@@ -73,7 +82,9 @@ pub async fn start_mesh_udp(
                         match FractalMeshPacket::from_bytes(&packet_bytes) {
                             Ok(packet) => {
                                 debug!(src = %src, seq = packet.sequence_id, token_id = packet.seed.token_id, "Semilla fractal recibida vía UDP");
-                                if let Err(e) = recv_state.ingest_remote_seed(packet.seed, src).await {
+                                if let Err(e) =
+                                    recv_state.ingest_remote_seed(packet.seed, src).await
+                                {
                                     warn!(error = %e, "Fallo al inyectar semilla remota en LiquidLattice");
                                 }
                             }
@@ -99,10 +110,8 @@ pub async fn start_mesh_udp(
         let mut logical_tick = 0u64;
         let mut windows: HashMap<SocketAddr, mycnet_core::predict::SendWindow> = HashMap::new();
         let mut last_observation_tick: HashMap<SocketAddr, Option<u64>> = HashMap::new();
-        let mut pending: HashMap<SocketAddr, VecDeque<PendingPacket>> = peers
-            .iter()
-            .map(|peer| (*peer, VecDeque::new()))
-            .collect();
+        let mut pending: HashMap<SocketAddr, VecDeque<PendingPacket>> =
+            peers.iter().map(|peer| (*peer, VecDeque::new())).collect();
 
         loop {
             ticker.tick().await;
@@ -117,7 +126,6 @@ pub async fn start_mesh_udp(
                     sequence_id = sequence_id.wrapping_add(1);
                     let packet = FractalMeshPacket::new(sequence_id, seed);
                     let queued = PendingPacket {
-                        sequence_id,
                         bytes: packet.to_bytes(),
                     };
                     for queue in pending.values_mut() {
@@ -161,50 +169,54 @@ mod tests {
     use std::sync::atomic::Ordering;
     use tokio::sync::broadcast;
 
+    fn pending_packet(sequence_id: u16) -> PendingPacket {
+        let seed = HolographicSeedBinary::from_lfm(u32::from(sequence_id), 0, 0, 0);
+        PendingPacket {
+            bytes: FractalMeshPacket::new(sequence_id, seed).to_bytes(),
+        }
+    }
+
+    fn packet_sequence_id(packet: &PendingPacket) -> u16 {
+        FractalMeshPacket::from_bytes(&packet.bytes)
+            .unwrap()
+            .sequence_id
+    }
+
     #[test]
     fn full_peer_queue_stalls_polling_and_retains_head_until_success() {
         let peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
         let mut pending = HashMap::from([(peer, VecDeque::new())]);
-        pending.get_mut(&peer).unwrap().push_back(PendingPacket {
-            sequence_id: 7,
-            bytes: [7; 40],
-        });
+        pending.get_mut(&peer).unwrap().push_back(pending_packet(7));
 
-        assert_eq!(poll_capacity(&[peer], &pending), MAX_PENDING_SEEDS_PER_PEER - 1);
+        assert_eq!(
+            poll_capacity(&[peer], &pending),
+            MAX_PENDING_SEEDS_PER_PEER - 1
+        );
         while pending.get(&peer).unwrap().len() < MAX_PENDING_SEEDS_PER_PEER {
-            pending.get_mut(&peer).unwrap().push_back(PendingPacket {
-                sequence_id: 8,
-                bytes: [8; 40],
-            });
+            pending.get_mut(&peer).unwrap().push_back(pending_packet(8));
         }
         assert_eq!(poll_capacity(&[peer], &pending), 0);
-        assert_eq!(pending[&peer].front().unwrap().sequence_id, 7);
+        assert_eq!(packet_sequence_id(pending[&peer].front().unwrap()), 7);
         pending.get_mut(&peer).unwrap().pop_front();
-        assert_eq!(pending[&peer].front().unwrap().sequence_id, 8);
+        assert_eq!(packet_sequence_id(pending[&peer].front().unwrap()), 8);
     }
 
     #[test]
     fn rejected_window_keeps_seed_pending() {
         let peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
         let mut pending = HashMap::from([(peer, VecDeque::new())]);
-        pending.get_mut(&peer).unwrap().push_back(PendingPacket {
-            sequence_id: 9,
-            bytes: [9; 40],
-        });
+        pending.get_mut(&peer).unwrap().push_back(pending_packet(9));
         let mut window = mycnet_core::predict::SendWindow::new();
         window.record(9, mycnet_core::s60::SPA::zero());
 
         assert!(!window.should_send(9, 10));
-        assert_eq!(pending[&peer].front().unwrap().sequence_id, 9);
+        assert_eq!(packet_sequence_id(pending[&peer].front().unwrap()), 9);
     }
 
     #[test]
     fn retained_head_observes_tq_refresh_after_seventeen_loop_ticks_once() {
         let peer: SocketAddr = "127.0.0.1:42429".parse().unwrap();
-        let mut pending = HashMap::from([(peer, VecDeque::from([PendingPacket {
-            sequence_id: 9,
-            bytes: [9; 40],
-        }]))]);
+        let mut pending = HashMap::from([(peer, VecDeque::from([pending_packet(9)]))]);
         let mut window = mycnet_core::predict::SendWindow::new();
         let mut cached_tq = mycnet_core::s60::SPA::zero();
         let mut cache_at = 1u64;
@@ -250,9 +262,7 @@ mod tests {
 
         assert_eq!(state.fractal_packets_sent.load(Ordering::Relaxed), 2);
         assert_eq!(
-            state
-                .fractal_packets_sent_to_peer
-                .load(Ordering::Relaxed),
+            state.fractal_packets_sent_to_peer.load(Ordering::Relaxed),
             1
         );
     }
@@ -270,14 +280,18 @@ mod tests {
         // Enviar paquete fractal
         let seed = HolographicSeedBinary::from_lfm(777, 0, 0, 10);
         let packet = FractalMeshPacket::new(1, seed);
-        sender_socket.send_to(&packet.to_bytes(), receiver_addr).await.unwrap();
+        sender_socket
+            .send_to(&packet.to_bytes(), receiver_addr)
+            .await
+            .unwrap();
 
         // Recibir y procesar
         let mut buf = [0u8; 128];
         let (len, src) = recv_socket.recv_from(&mut buf).await.unwrap();
         assert_eq!(len, 40);
 
-        let received_packet = FractalMeshPacket::from_bytes(&buf[..40].try_into().unwrap()).unwrap();
+        let received_packet =
+            FractalMeshPacket::from_bytes(&buf[..40].try_into().unwrap()).unwrap();
         assert_eq!(received_packet.seed.token_id, 777);
 
         let coord = state

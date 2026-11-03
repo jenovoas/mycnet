@@ -226,6 +226,10 @@ const _: () = assert!(
 );
 
 impl HolographicSeedBinary {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Se conserva la firma pública del constructor binario"
+    )]
     pub fn new(
         token_id: u32,
         coord_q: i32,
