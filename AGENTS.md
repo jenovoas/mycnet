@@ -23,6 +23,10 @@ Usa convenciones Rust: módulos, funciones y variables `snake_case`; tipos y tra
 
 Distingue lo implementado en este repositorio de lo planeado y de lo verificado en ejecución. La presencia de `sentinel_bridge.rs` o nombres SHM no prueba que Sentinel esté conectado ni que los datos se propaguen entre hosts. No inspecciones ni despliegues Sentinel en una tarea MyCNet sin solicitud explícita; no presentes topologías ni resultados históricos como estado actual.
 
+## Prototipos Python → Rust y preservación del historial
+- Python se usa para prototipar interfaces, algoritmos y features con iteración rápida, bibliotecas disponibles, pruebas y mediciones. Sus archivos conservan la lógica matemática, conectiva y algorítmica, incluidos errores y pasos de diseño útiles para estudio.
+- No modificar, limpiar, reescribir ni actualizar prototipos, wrappers o pruebas Python como efecto colateral de una migración Rust. Consultarlos solo para recuperar la lógica que se va a portar; implementar y validar la lógica objetivo en Rust, con pruebas Rust. Modificar Python únicamente por petición explícita del usuario.
+
 ## Graphify y documentación
 
 Si existe `graphify-out/graph.json`, ejecuta `graphify query "<pregunta>"` antes de búsquedas textuales amplias. Tras cambios importantes de código, ejecuta `graphify update .`. Documenta en español, con resultados fechados y separación clara entre estado actual e histórico.
