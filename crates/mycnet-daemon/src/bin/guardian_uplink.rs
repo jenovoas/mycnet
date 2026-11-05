@@ -19,6 +19,7 @@
 
 use mycnet_core::mesh::FractalMeshPacket;
 use mycnet_core::s60::HolographicSeedBinary;
+use serde::de::Error as _;
 use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -41,7 +42,8 @@ struct WalOuter {
 
 #[derive(Deserialize)]
 struct WalInner {
-    entropy_s60_raw: i64,
+    #[serde(default)]
+    entropy_s60_raw: Option<i64>,
     severity: u8,
     pid: u32,
     sanitized_event: SanitizedEvent,
@@ -50,6 +52,8 @@ struct WalInner {
 #[derive(Deserialize)]
 struct SanitizedEvent {
     guardian_code: u8,
+    #[serde(default)]
+    entropy_s60_raw: Option<i64>,
 }
 
 fn token_of(event_id: &str) -> u32 {
@@ -86,12 +90,16 @@ fn seed_of(env: &WalEnvelope) -> Result<HolographicSeedBinary, serde_json::Error
     let outer: WalOuter = serde_json::from_str(&env.payload)?;
     let inner = outer.data;
     let (q, r) = hex_of((inner.pid as usize) % 37);
+    let entropy = inner
+        .entropy_s60_raw
+        .or(inner.sanitized_event.entropy_s60_raw)
+        .ok_or_else(|| serde_json::Error::custom("missing field `entropy_s60_raw`"))?;
     Ok(HolographicSeedBinary::new(
         token_of(&env.event_id),
         q,
         r,
         -q - r,
-        inner.entropy_s60_raw,
+        entropy,
         inner.severity % 60,
         inner.sanitized_event.guardian_code,
         0x01,
