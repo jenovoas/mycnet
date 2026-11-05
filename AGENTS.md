@@ -38,3 +38,7 @@ El historial disponible muestra `chore: ...` con resumen en español. Usa prefij
 ## Alcance de verificaciones de despliegue
 
 Cuando el usuario pida revisar o verificar un despliegue, limita la comprobación a MyCNet y sus propios servicios, binarios, API, métricas y transporte. No inspecciones ni evalúes el estado o despliegue de Sentinel salvo solicitud explícita. Si MyCNet informa una integración externa desconectada, registra ese estado observable sin convertirlo en una tarea de despliegue de Sentinel.
+
+## Skills del sistema Sentinel / S60
+
+Al trabajar en Sentinel, MyCNet o ME-60OS, consulta y aplica las skills disponibles `sentinel-knowledge-layer`, `sentinel-comprehension` y `sentinel-s60-stack` en `.agents/skills/` antes de tareas de investigación, arquitectura, matemáticas, integración o código. Para tareas específicas, carga la capa pertinente; en cambios que crucen capas, carga las tres. Las skills también están enlazadas en `.claude/skills/`, `.gemini/skills/` y `.opencode/skills/`. En Hermes están instaladas en `~/.hermes/skills/`. Si una skill difiere de estas instrucciones vigentes, del código fuente o de la evidencia verificable, prevalecen estos últimos; conserva los detalles obsoletos como contexto histórico y no los afirmes como estado actual.
