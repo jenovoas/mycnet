@@ -5,9 +5,7 @@
 //!
 //! Endpoints:
 //!   GET  /health          — estado básico
-//!   GET  /api/v1/mesh     — snapshot completo del mesh
-//!   GET  /api/v1/adm      — estado interno del ADM
-//!   WS   /api/v1/stream   — telemetría en tiempo real
+//!   GET  /api/v1/kv/:token  — presencia de semilla en ResonantStore (debug)
 
 use axum::{
     extract::ws::{Message, WebSocket},
@@ -29,6 +27,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/health", get(health))
         .route("/api/v1/mesh", get(mesh_state))
         .route("/api/v1/adm", get(adm_state))
+        .route("/api/v1/kv/:token", get(kv_lookup))
         .route("/api/v1/stream", get(ws_handler))
         .with_state(state)
 }
@@ -52,12 +51,23 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
         "fractal_packets_sent_to_peer": state.fractal_packets_sent_to_peer.load(Ordering::Relaxed),
         "fractal_seeds_ingested": state.fractal_seeds_ingested.load(Ordering::Relaxed),
         "fractal_seeds_ingested_from_peer": state.fractal_seeds_ingested_from_peer.load(Ordering::Relaxed),
+        "fractal_local_polled": state.fractal_local_polled.load(Ordering::Relaxed),
     }))
 }
 
 async fn mesh_state(State(state): State<Arc<AppState>>) -> Json<Value> {
     let mesh = state.get_mesh_state().await;
     Json(serde_json::to_value(mesh).unwrap_or_default())
+}
+
+async fn kv_lookup(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(token): axum::extract::Path<u32>,
+) -> impl IntoResponse {
+    let key = token.to_le_bytes();
+    let store = state.kv_store.lock().await;
+    let present = store.get(&key).is_some();
+    Json(json!({ "token_id": token, "present": present }))
 }
 
 async fn adm_state(State(state): State<Arc<AppState>>) -> Json<Value> {

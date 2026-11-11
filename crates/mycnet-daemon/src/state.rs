@@ -7,13 +7,13 @@ use anyhow::Result;
 use serde_json::json;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
-use tokio::sync::{Mutex, broadcast};
+use tokio::sync::{broadcast, Mutex};
 use tracing::{info, warn};
 
-use mycnet_core::{ADM, MeshState, PhysicalNode, SPA};
-use mycnet_core::s60::HolographicSeedBinary;
 use mycnet_core::mesh::{get_local_neighbors, mesh_coherence};
+use mycnet_core::s60::HolographicSeedBinary;
 use mycnet_core::yhwh::YhwhPhase;
+use mycnet_core::{MeshState, PhysicalNode, ADM, SPA};
 use mycnet_memory::holographic_sync::HolographicSyncEngine;
 use mycnet_memory::lattice::{Coord, LiquidLattice};
 use mycnet_memory::sentinel_bridge::{SentinelBridge, SentinelFractalBridge};
@@ -30,18 +30,19 @@ const SENTINEL_REFRESH_EVERY_TICKS: u64 = 17;
 const SENTINEL_LATTICE_RINGS: u32 = 3;
 
 pub struct AppState {
-    pub adm:            Mutex<ADM>,
-    pub tx:             broadcast::Sender<String>,
-    pub hostname:       String,
-    pub bat_ip:         String,
-    pub lattice:        Mutex<LiquidLattice>,
-    pub sentinel:       Mutex<Option<SentinelBridge>>,
+    pub adm: Mutex<ADM>,
+    pub tx: broadcast::Sender<String>,
+    pub hostname: String,
+    pub bat_ip: String,
+    pub lattice: Mutex<LiquidLattice>,
+    pub sentinel: Mutex<Option<SentinelBridge>>,
     pub fractal_bridge: Mutex<Option<SentinelFractalBridge>>,
     pub metrics_peer: Option<SocketAddr>,
     pub fractal_packets_sent: AtomicU64,
     pub fractal_packets_sent_to_peer: AtomicU64,
     pub fractal_seeds_ingested: AtomicU64,
     pub fractal_seeds_ingested_from_peer: AtomicU64,
+    pub fractal_local_polled: AtomicU64,
     /// TQ observado por peer (addr string → (raw S60, tick)), refresco Salto-17.
     pub peer_tq_cache: Mutex<std::collections::HashMap<String, (i64, u64)>>,
     /// Almacén resonante local (memoria colectiva KV por simpatía, EXP-002).
@@ -97,8 +98,11 @@ impl AppState {
 
         // satellite_id = último octeto de la IP bat (1-6). Definido antes
         // de mover bat_ip al struct.
-        let satellite_id: u8 = bat_ip.rsplit('.').next()
-            .and_then(|o| o.parse().ok()).unwrap_or(0);
+        let satellite_id: u8 = bat_ip
+            .rsplit('.')
+            .next()
+            .and_then(|o| o.parse().ok())
+            .unwrap_or(0);
 
         Self {
             adm: Mutex::new(adm),
@@ -113,6 +117,7 @@ impl AppState {
             fractal_packets_sent_to_peer: AtomicU64::new(0),
             fractal_seeds_ingested: AtomicU64::new(0),
             fractal_seeds_ingested_from_peer: AtomicU64::new(0),
+            fractal_local_polled: AtomicU64::new(0),
             peer_tq_cache: Mutex::new(std::collections::HashMap::new()),
             // Anillos 3 = 37 nodos (igual que lattice espejo).
             kv_store: Mutex::new(ResonantStore::new(satellite_id, SENTINEL_LATTICE_RINGS)),
@@ -272,14 +277,17 @@ impl AppState {
         let neighbors = parse_batctl_snapshot(&snap).ok()?;
         let vxmap = parse_vxlan_remotes(&vx);
         let tq = tq_for_peer_ip(&neighbors, &vxmap, &peer.ip().to_string())?;
-        self.peer_tq_cache.lock().await.insert(key, (tq.to_raw(), tick));
+        self.peer_tq_cache
+            .lock()
+            .await
+            .insert(key, (tq.to_raw(), tick));
         Some((tq, tick))
     }
 
-
     /// Registra un datagrama solo después de que `send_to` tuvo éxito.
     pub fn record_fractal_packet_sent(&self, peer: SocketAddr) {
-        self.fractal_packets_sent.fetch_add(1, AtomicOrdering::Relaxed);
+        self.fractal_packets_sent
+            .fetch_add(1, AtomicOrdering::Relaxed);
         if self.metrics_peer == Some(peer) {
             self.fractal_packets_sent_to_peer
                 .fetch_add(1, AtomicOrdering::Relaxed);
@@ -316,20 +324,25 @@ impl AppState {
                 .fetch_add(1, AtomicOrdering::Relaxed);
         }
 
-        let _ = self.tx.send(json!({
-            "type": "fractal_seed_ingested",
-            "token_id": seed.token_id,
-            "coord": [coord.q, coord.r],
-            "amplitude_s60": seed.amplitude_s60,
-            "phase_sector": seed.phase_sector,
-        }).to_string());
+        let _ = self.tx.send(
+            json!({
+                "type": "fractal_seed_ingested",
+                "token_id": seed.token_id,
+                "coord": [coord.q, coord.r],
+                "amplitude_s60": seed.amplitude_s60,
+                "phase_sector": seed.phase_sector,
+            })
+            .to_string(),
+        );
 
         Ok(coord)
     }
 
-
     /// Consume como máximo `limit` entradas para permitir backpressure antes de avanzar el cursor.
-    pub async fn poll_local_fractal_seeds_bounded(&self, limit: usize) -> Vec<HolographicSeedBinary> {
+    pub async fn poll_local_fractal_seeds_bounded(
+        &self,
+        limit: usize,
+    ) -> Vec<HolographicSeedBinary> {
         if limit == 0 {
             return Vec::new();
         }
@@ -337,9 +350,23 @@ impl AppState {
         if let Some(bridge) = &mut *bridge_guard {
             let seeds = bridge.poll_new_seeds(limit);
             if !seeds.is_empty() {
+                self.fractal_local_polled
+                    .fetch_add(seeds.len() as u64, AtomicOrdering::Relaxed);
                 let mut lattice = self.lattice.lock().await;
+                let mut store = self.kv_store.lock().await;
                 for seed in &seeds {
                     let _ = lattice.inject_fractal_seed(seed);
+                    // Memoria colectiva también para semillas propias:
+                    // el store local es la primera réplica (lectura local).
+                    use mycnet_memory::holographic_sync::HolographicSeed as HS;
+                    let hs = HS {
+                        key: seed.token_id.to_le_bytes().to_vec(),
+                        amplitude: mycnet_core::s60::SPA::from_raw(seed.amplitude_s60),
+                        phase_sector: seed.phase_sector,
+                        pulse_period: seed.yhwh_pulse as u32,
+                        seed_bytes: seed.to_bytes().to_vec(),
+                    };
+                    HolographicSyncEngine::expand_seed(&mut store, &hs);
                 }
             }
             seeds
