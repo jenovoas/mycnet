@@ -53,8 +53,8 @@ impl SPA {
     }
 
     pub fn from_raw(raw: i64) -> Self {
-        let sign = if raw < 0 { -1 } else { 1 };
-        let mut val = raw.abs();
+        // Cociente y resto conservan el signo, incluido i64::MIN sin abs().
+        let mut val = raw;
         let q = val % 60;
         val /= 60;
         let t = val % 60;
@@ -65,7 +65,7 @@ impl SPA {
         val /= 60;
         let d = val;
         Self {
-            components: [d * sign, m * sign, s * sign, t * sign, q * sign],
+            components: [d, m, s, t, q],
         }
     }
 
@@ -367,6 +367,18 @@ mod tests {
         let b = SPA::zero();
         let r = a.div_safe(b);
         assert_eq!(r, Err(SPAError::DivisionByZero));
+    }
+
+    #[test]
+    fn raw_extremes_roundtrip_without_overflow() {
+        for raw in [i64::MIN, i64::MIN + 1, -12_960_001, -1, 0, 1, i64::MAX] {
+            let value = SPA::from_raw(raw);
+            assert_eq!(value.to_raw(), raw);
+            assert!(value.components[1..].iter().all(|part| part.abs() < 60));
+            if raw < 0 {
+                assert!(value.components.iter().all(|part| *part <= 0));
+            }
+        }
     }
 
     #[test]

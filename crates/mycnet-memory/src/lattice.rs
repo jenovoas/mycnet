@@ -14,6 +14,8 @@
 //! ```
 //! La actualización es ATÓMICA: todos los nodos leen el estado anterior,
 //! luego todos escriben el nuevo. Sin sesgo de orden.
+//! Las medias acumulan raw SPA en i128 y dividen antes de convertir a i64:
+//! sumar amplitudes extremas no debe desbordar ni saturar la media.
 //!
 //! **Canal dual** (EXP-012):
 //! - Canal A (Energía / Amplitud SPA): datos reales, 6 bytes/nodo
@@ -183,9 +185,7 @@ impl LiquidLattice {
             // Umbral 0.8 en S60 puro: 0.8 = 48/60 (exacto).
             // raw = SCALE_0 * 48 / 60 = 60^4 * 48 / 60 = 60^3 * 48 = 216000 * 48 = 10_368_000.
             // Sin pasar por f64: scale-up primero, dividir al final.
-            coherence_threshold: SPA::from_raw(
-                (SPA::SCALE_0 / 60) * 48
-            ),
+            coherence_threshold: SPA::from_raw((SPA::SCALE_0 / 60) * 48),
         }
     }
 
@@ -253,13 +253,20 @@ impl LiquidLattice {
     }
 
     /// Inyecta una semilla fractal binaria (32B) directamente en el nodo hexagonal correspondiente.
-    pub fn inject_fractal_seed(&mut self, seed: &crate::holographic_sync::HolographicSeedBinary) -> Result<Coord, &'static str> {
+    pub fn inject_fractal_seed(
+        &mut self,
+        seed: &crate::holographic_sync::HolographicSeedBinary,
+    ) -> Result<Coord, &'static str> {
         if !seed.is_valid_crc() {
             return Err("Checksum CRC16 inválido en la semilla fractal");
         }
-        let coord = Coord::from_cubic(seed.coord_q, seed.coord_r, seed.coord_s).ok_or("Invariante espacial cúbica violada (q+r+s != 0)")?;
-        
-        let node = self.nodes.get_mut(&coord).ok_or("Coordenada fuera de los límites del lattice")?;
+        let coord = Coord::from_cubic(seed.coord_q, seed.coord_r, seed.coord_s)
+            .ok_or("Invariante espacial cúbica violada (q+r+s != 0)")?;
+
+        let node = self
+            .nodes
+            .get_mut(&coord)
+            .ok_or("Coordenada fuera de los límites del lattice")?;
         if node.is_closed() {
             return Err("Sector hexagonal cerrado por coherencia");
         }
@@ -300,20 +307,20 @@ impl LiquidLattice {
                 continue;
             }
 
-            let mut total = node.amplitude;
-            let mut count = 1i64;
+            let mut total = i128::from(node.amplitude.to_raw());
+            let mut count = 1i128;
 
             for neighbor_coord in coord.neighbors() {
                 if let Some(&neighbor_amp) = snapshot.get(&neighbor_coord) {
-                    total = total + neighbor_amp;
+                    total += i128::from(neighbor_amp.to_raw());
                     count += 1;
                 }
             }
 
             // A_new = (A_self + Σ_vecinos) / (1 + N_vecinos)
-            let avg = total
-                .div_safe(SPA::from_int(count))
-                .unwrap_or(node.amplitude);
+            // Una media de entradas i64 siempre cabe en i64; no saturar la
+            // suma intermedia, pues alteraría el resultado antes de dividir.
+            let avg = SPA::from_raw((total / count) as i64);
 
             // Ruido de fase mínimo (simula entropía cuántica)
             let noisy = if noise_mask > 0 {
@@ -346,41 +353,39 @@ impl LiquidLattice {
 
     /// Coherencia global del lattice: amplitud media normalizada.
     pub fn global_coherence(&self) -> SPA {
-        let active: Vec<&LatticeNode> = self.nodes.values().filter(|n| !n.is_closed()).collect();
-
-        if active.is_empty() {
+        let (sum, count) = self
+            .nodes
+            .values()
+            .filter(|node| !node.is_closed())
+            .fold((0i128, 0i128), |(sum, count), node| {
+                (sum + i128::from(node.amplitude.to_raw()), count + 1)
+            });
+        if count == 0 {
             return SPA::zero();
         }
-
-        let sum: i64 = active.iter().map(|n| n.amplitude.to_raw()).sum();
-        SPA::from_raw(sum / active.len() as i64)
+        SPA::from_raw((sum / count) as i64)
     }
 
     /// Cierra sectores cuya coherencia local cae bajo el umbral.
     /// (Hexagonal control — redes_micelio_hexagonal.md §4.3)
     fn apply_hexagonal_control(&mut self) {
-        for region in 0u8..6 {
-            let region_nodes: Vec<SPA> = self
-                .nodes
-                .iter()
-                .filter(|(c, _)| c.hex_region() == region)
-                .map(|(_, n)| n.amplitude)
-                .collect();
+        let mut sums = [0i128; 6];
+        let mut counts = [0i128; 6];
+        for (coord, node) in &self.nodes {
+            let region = coord.hex_region() as usize;
+            sums[region] += i128::from(node.amplitude.to_raw());
+            counts[region] += 1;
+        }
 
-            if region_nodes.is_empty() {
-                continue;
+        let mut should_close = [false; 6];
+        for region in 0..6 {
+            if counts[region] > 0 {
+                let avg = SPA::from_raw((sums[region] / counts[region]) as i64);
+                should_close[region] = avg < self.coherence_threshold;
             }
-
-            let sum: i64 = region_nodes.iter().map(|a| a.to_raw()).sum();
-            let avg = SPA::from_raw(sum / region_nodes.len() as i64);
-
-            let should_close = avg < self.coherence_threshold;
-
-            for (coord, node) in self.nodes.iter_mut() {
-                if coord.hex_region() == region {
-                    node.set_closed(should_close);
-                }
-            }
+        }
+        for (coord, node) in &mut self.nodes {
+            node.set_closed(should_close[coord.hex_region() as usize]);
         }
     }
 
@@ -533,5 +538,95 @@ mod tests {
         assert!(node.is_occupied());
         assert_eq!(node.amplitude.to_raw(), seed.amplitude_s60);
         assert_eq!(node.phase_sector, 15);
+    }
+
+    #[test]
+    fn global_coherence_averages_extreme_amplitudes_exactly() {
+        for raw in [i64::MAX, i64::MIN] {
+            let mut lattice = LiquidLattice::new(1);
+            for node in lattice.nodes.values_mut() {
+                node.amplitude = SPA::from_raw(raw);
+            }
+            assert_eq!(lattice.global_coherence().to_raw(), raw);
+        }
+
+        let mut lattice = LiquidLattice::new(1);
+        lattice.nodes.retain(|coord, _| coord.r == 0);
+        for (coord, node) in &mut lattice.nodes {
+            node.amplitude = SPA::from_raw(if coord.q == 0 { i64::MIN } else { i64::MAX });
+        }
+        let expected = ((2 * i128::from(i64::MAX) + i128::from(i64::MIN)) / 3) as i64;
+        assert_eq!(lattice.global_coherence().to_raw(), expected);
+        lattice
+            .nodes
+            .get_mut(&Coord { q: 0, r: 0 })
+            .unwrap()
+            .set_closed(true);
+        assert_eq!(lattice.global_coherence().to_raw(), i64::MAX);
+        for node in lattice.nodes.values_mut() {
+            node.set_closed(true);
+        }
+        assert_eq!(lattice.global_coherence().to_raw(), 0);
+    }
+
+    #[test]
+    fn hexagonal_control_compares_exact_extreme_region_means() {
+        for raw in [i64::MAX, i64::MIN] {
+            let mut lattice = LiquidLattice::new(2);
+            lattice.coherence_threshold = SPA::from_raw(raw);
+            for node in lattice.nodes.values_mut() {
+                node.amplitude = SPA::from_raw(raw);
+            }
+            lattice.apply_hexagonal_control();
+            assert!(lattice.nodes.values().all(|node| !node.is_closed()));
+        }
+
+        let mut lattice = LiquidLattice::new(2);
+        lattice.nodes.retain(|coord, _| coord.hex_region() == 0);
+        assert_eq!(lattice.nodes.len(), 3);
+        for (coord, node) in &mut lattice.nodes {
+            node.amplitude = SPA::from_raw(if coord.r == 0 { i64::MIN } else { i64::MAX });
+        }
+        let expected = ((2 * i128::from(i64::MAX) + i128::from(i64::MIN)) / 3) as i64;
+        lattice.coherence_threshold = SPA::from_raw(expected);
+        lattice.apply_hexagonal_control();
+        assert!(lattice.nodes.values().all(|node| !node.is_closed()));
+        lattice.coherence_threshold = SPA::from_raw(expected + 1);
+        lattice.apply_hexagonal_control();
+        assert!(lattice.nodes.values().all(|node| node.is_closed()));
+    }
+
+    #[test]
+    fn diffusion_averages_extreme_neighbors_before_narrowing() {
+        let center = Coord { q: 0, r: 0 };
+        for raw in [i64::MAX, i64::MIN] {
+            let mut lattice = LiquidLattice::new(1);
+            lattice.coherence_threshold = SPA::from_raw(i64::MIN);
+            for node in lattice.nodes.values_mut() {
+                node.amplitude = SPA::from_raw(raw);
+            }
+            let step = lattice.diffuse_tick(center.hex_region(), 0);
+            assert_eq!(step.coherence.to_raw(), raw);
+            assert!(lattice
+                .nodes
+                .values()
+                .all(|node| node.amplitude.to_raw() == raw));
+            assert!(lattice.nodes.values().all(|node| !node.is_closed()));
+        }
+
+        let mut lattice = LiquidLattice::new(1);
+        lattice.coherence_threshold = SPA::from_raw(i64::MIN);
+        lattice.nodes.get_mut(&center).unwrap().amplitude = SPA::from_raw(i64::MAX);
+        for (index, coord) in center.neighbors().into_iter().enumerate() {
+            let raw = if index % 2 == 0 { i64::MAX } else { i64::MIN };
+            lattice.nodes.get_mut(&coord).unwrap().amplitude = SPA::from_raw(raw);
+        }
+        let expected = ((4 * i128::from(i64::MAX) + 3 * i128::from(i64::MIN)) / 7) as i64;
+        lattice.diffuse_tick(center.hex_region(), 0);
+        assert_eq!(lattice.nodes[&center].amplitude.to_raw(), expected);
+        for (index, coord) in center.neighbors().into_iter().enumerate() {
+            let raw = if index % 2 == 0 { i64::MAX } else { i64::MIN };
+            assert_eq!(lattice.nodes[&coord].amplitude.to_raw(), raw);
+        }
     }
 }
