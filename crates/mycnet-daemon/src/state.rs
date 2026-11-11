@@ -17,7 +17,7 @@ use mycnet_core::{MeshState, PhysicalNode, ADM, SPA};
 use mycnet_memory::holographic_sync::HolographicSyncEngine;
 use mycnet_memory::lattice::{Coord, LiquidLattice};
 use mycnet_memory::sentinel_bridge::{SentinelBridge, SentinelFractalBridge};
-use mycnet_memory::storage::ResonantStore;
+use mycnet_memory::storage::{KvApply, KvSeedRecord, ResonantStore};
 
 /// Cadencia de refresco desde el lattice fonónico de sentinel:
 /// cada 17 ticks = ~405 ms @ 42 Hz = el Salto-17 soberano de Plimpton.
@@ -292,6 +292,16 @@ impl AppState {
             self.fractal_packets_sent_to_peer
                 .fetch_add(1, AtomicOrdering::Relaxed);
         }
+    }
+
+    /// Vía MYKV separada del ring fractal: primero LWW/store exacto,
+    /// después el transporte puede emitir ACK. No usa `put` legacy.
+    pub async fn ingest_kv_seed(
+        &self,
+        key: &str,
+        record: KvSeedRecord,
+    ) -> std::result::Result<KvApply, &'static str> {
+        self.kv_store.lock().await.put_kv_seed(key, record)
     }
 
     /// Inyecta una semilla fractal recibida desde la red mesh remota.

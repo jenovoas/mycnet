@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use crate::lattice::{Coord, DiffusionStep, LiquidLattice};
 use crate::phase_gate::PhaseGate;
 use crate::sync::SatelliteSync;
-use mycnet_core::s60::SPA;
+use mycnet_core::s60::{HolographicSeedBinary, SPA};
 use mycnet_core::yhwh::YhwhPhase;
 
 /// Ticks por Quantum Leap: T=68s × 41.77 Hz ≈ 2840 ticks.
@@ -34,6 +34,49 @@ pub const QUANTUM_LEAP_TICKS: u64 = 2840;
 /// para mantener la resonancia viva entre quantum leaps.
 /// Deriva del número primo 17 de la Tabla Plimpton 322.
 pub const BIO_PULSE_TICKS: u64 = 710;
+
+/// Memoria KV exacta y volátil, separada de la proyección legacy.
+pub const MAX_KV_KEYS: usize = 4096;
+pub const MAX_KV_KEY_BYTES: usize = 512;
+
+pub fn kv_key_allowed(key: &str) -> bool {
+    !key.is_empty()
+        && key.len() <= MAX_KV_KEY_BYTES
+        && (key.starts_with("crystal-") || key.starts_with("portal-metrics-"))
+}
+
+/// El orden de campos define LWW total: timestamp, hash y semilla binaria.
+/// Solo metadatos: no contiene ni permite recuperar el payload original.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct KvSeedRecord {
+    pub timestamp_ns: u64,
+    pub payload_hash: [u8; 32],
+    pub seed_bytes: [u8; 32],
+}
+
+impl KvSeedRecord {
+    pub fn seed(&self) -> Result<HolographicSeedBinary, &'static str> {
+        // Validar en i64 antes del parser legacy, cuya suma cúbica usa i32.
+        let q = i32::from_le_bytes(self.seed_bytes[4..8].try_into().unwrap());
+        let r = i32::from_le_bytes(self.seed_bytes[8..12].try_into().unwrap());
+        let s = i32::from_le_bytes(self.seed_bytes[12..16].try_into().unwrap());
+        if i64::from(q) + i64::from(r) + i64::from(s) != 0 {
+            return Err("Coordenadas KV inválidas");
+        }
+        // La suma intermedia del parser también debe ser representable.
+        if q.checked_add(r).is_none() {
+            return Err("Coordenadas KV fuera de rango");
+        }
+        HolographicSeedBinary::from_bytes(&self.seed_bytes)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KvApply {
+    Applied,
+    Duplicate,
+    Superseded,
+}
 
 /// Resultado de una operación de almacenamiento.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +117,8 @@ pub struct ResonantStore {
     key_lengths: HashMap<Vec<u8>, usize>,
     /// Marca temporal LWW por clave (mayor tick/timestamp gana).
     key_timestamps: HashMap<Vec<u8>, u64>,
+    /// Última versión exacta KV por clave; no comparte índices con `put`.
+    kv_seeds: HashMap<String, KvSeedRecord>,
     /// Contador de Quantum Leaps ocurridos (telemetría)
     pub leap_count: u64,
 }
@@ -93,6 +138,7 @@ impl ResonantStore {
             key_index: HashMap::new(),
             key_lengths: HashMap::new(),
             key_timestamps: HashMap::new(),
+            kv_seeds: HashMap::new(),
             leap_count: 0,
         }
     }
@@ -128,6 +174,42 @@ impl ResonantStore {
         self.put(key, value);
         self.key_timestamps.insert(key.to_vec(), timestamp);
         true
+    }
+
+    /// Aplica LWW KV antes de confirmar al peer. Duplicados y versiones
+    /// superadas no vuelven a inyectarse, aunque la proyección haya disipado.
+    /// Si no se puede aplicar, no registra versión ni autoriza un ACK.
+    pub fn put_kv_seed(
+        &mut self,
+        key: &str,
+        record: KvSeedRecord,
+    ) -> Result<KvApply, &'static str> {
+        if !kv_key_allowed(key) {
+            return Err("Clave KV fuera de whitelist");
+        }
+        let seed = record.seed()?;
+        if let Some(previous) = self.kv_seeds.get_mut(key) {
+            match record.cmp(previous) {
+                std::cmp::Ordering::Less => return Ok(KvApply::Superseded),
+                std::cmp::Ordering::Equal => return Ok(KvApply::Duplicate),
+                std::cmp::Ordering::Greater => {
+                    self.lattice.inject_fractal_seed(&seed)?;
+                    *previous = record;
+                    return Ok(KvApply::Applied);
+                }
+            }
+        }
+        if self.kv_seeds.len() >= MAX_KV_KEYS {
+            return Err("Capacidad de claves KV agotada");
+        }
+        self.lattice.inject_fractal_seed(&seed)?;
+        self.kv_seeds.insert(key.to_owned(), record);
+        Ok(KvApply::Applied)
+    }
+
+    /// Semilla original byte a byte, no una reconstrucción desde el lattice.
+    pub fn get_kv_seed(&self, key: &str) -> Option<&KvSeedRecord> {
+        self.kv_seeds.get(key)
     }
 
     /// Recupera datos por clave.
@@ -275,5 +357,116 @@ mod tests {
         assert!(store.put_timestamped(b"k", b"nuevo", 20));
         let data = store.get(b"k").expect("la clave debe existir");
         assert_eq!(&data[..5], b"nuevo");
+    }
+}
+
+#[cfg(test)]
+mod kv_tests {
+    use super::*;
+
+    fn record(timestamp_ns: u64, hash: u8, token: u32) -> KvSeedRecord {
+        let mut seed = HolographicSeedBinary::from_lfm(token, 0, 0, 17);
+        seed.reserved = [0xab, 0xcd];
+        KvSeedRecord {
+            timestamp_ns,
+            payload_hash: [hash; 32],
+            seed_bytes: seed.to_bytes(),
+        }
+    }
+
+    #[test]
+    fn kv_retains_exact_seed_separately_from_legacy_and_dissipation() {
+        let mut store = ResonantStore::new(0, 3);
+        let value = record(123, 7, 456);
+        assert_eq!(
+            store.put_kv_seed("crystal-exact", value),
+            Ok(KvApply::Applied)
+        );
+        store.put(b"crystal-exact", b"legacy overwrite");
+        store.put_timestamped(b"crystal-exact", b"legacy timestamp", u64::MAX);
+        store.tick(1);
+        assert_eq!(store.get_kv_seed("crystal-exact"), Some(&value));
+        assert_eq!(
+            store.get_kv_seed("crystal-exact").unwrap().seed_bytes[30..],
+            [0xab, 0xcd]
+        );
+    }
+
+    #[test]
+    fn kv_equal_timestamps_converge_by_hash_then_seed_in_any_order() {
+        let versions = [
+            record(9, 255, 9),
+            record(10, 1, 1),
+            record(10, 2, 1),
+            record(10, 2, 2),
+        ];
+        let expected = *versions.iter().max().unwrap();
+        for order in [[0, 1, 2, 3], [3, 2, 1, 0], [2, 0, 3, 1], [1, 3, 0, 2]] {
+            let mut store = ResonantStore::new(0, 3);
+            for index in order {
+                store
+                    .put_kv_seed("portal-metrics-order", versions[index])
+                    .unwrap();
+            }
+            assert_eq!(store.get_kv_seed("portal-metrics-order"), Some(&expected));
+        }
+    }
+
+    #[test]
+    fn kv_duplicate_and_superseded_do_not_reinject_lattice() {
+        let mut store = ResonantStore::new(0, 3);
+        let value = record(10, 1, 2);
+        store.put_kv_seed("crystal-once", value).unwrap();
+        let coord = Coord { q: 0, r: 0 };
+        store.lattice.nodes.get_mut(&coord).unwrap().amplitude = SPA::from_raw(123);
+        assert_eq!(
+            store.put_kv_seed("crystal-once", value),
+            Ok(KvApply::Duplicate)
+        );
+        assert_eq!(
+            store.put_kv_seed("crystal-once", record(9, 255, 9)),
+            Ok(KvApply::Superseded),
+        );
+        assert_eq!(store.lattice.nodes[&coord].amplitude, SPA::from_raw(123));
+        assert_eq!(store.get_kv_seed("crystal-once"), Some(&value));
+    }
+
+    #[test]
+    fn kv_capacity_preserves_existing_versions_without_eviction() {
+        let mut store = ResonantStore::new(0, 3);
+        let original = record(1, 1, 1);
+        for i in 0..MAX_KV_KEYS {
+            store
+                .put_kv_seed(&format!("crystal-{i}"), original)
+                .unwrap();
+        }
+        assert!(store.put_kv_seed("crystal-overflow", original).is_err());
+        assert!(store.get_kv_seed("crystal-overflow").is_none());
+        assert_eq!(
+            store.put_kv_seed("crystal-0", original),
+            Ok(KvApply::Duplicate)
+        );
+        let newer = record(2, 1, 1);
+        assert_eq!(store.put_kv_seed("crystal-0", newer), Ok(KvApply::Applied));
+        assert_eq!(store.kv_seeds.len(), MAX_KV_KEYS);
+        assert_eq!(store.get_kv_seed("crystal-0"), Some(&newer));
+    }
+
+    #[test]
+    fn kv_rejects_invalid_key_seed_and_unapplicable_projection_atomically() {
+        let mut store = ResonantStore::new(0, 3);
+        let value = record(1, 1, 1);
+        for key in ["security-secret", "genesis", "portal", ""] {
+            assert!(store.put_kv_seed(key, value).is_err());
+        }
+        let mut invalid = value;
+        invalid.seed_bytes[0] ^= 1;
+        assert!(store.put_kv_seed("crystal-crc", invalid).is_err());
+        let outside = KvSeedRecord {
+            seed_bytes: HolographicSeedBinary::from_lfm(1, 9, 0, 1).to_bytes(),
+            ..value
+        };
+        assert!(store.put_kv_seed("crystal-outside", outside).is_err());
+        assert!(store.kv_seeds.is_empty());
     }
 }
