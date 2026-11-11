@@ -72,6 +72,8 @@ pub struct ResonantStore {
     key_index: HashMap<Vec<u8>, Coord>,
     /// Longitudes originales de datos (para retrieve exacto)
     key_lengths: HashMap<Vec<u8>, usize>,
+    /// Marca temporal LWW por clave (mayor tick/timestamp gana).
+    key_timestamps: HashMap<Vec<u8>, u64>,
     /// Contador de Quantum Leaps ocurridos (telemetría)
     pub leap_count: u64,
 }
@@ -90,6 +92,7 @@ impl ResonantStore {
             sync: SatelliteSync::new(satellite_id),
             key_index: HashMap::new(),
             key_lengths: HashMap::new(),
+            key_timestamps: HashMap::new(),
             leap_count: 0,
         }
     }
@@ -111,6 +114,20 @@ impl ResonantStore {
             coherence: self.lattice.global_coherence().to_string(),
             tick: self.lattice.tick,
         }
+    }
+
+    /// Almacena con marca temporal para resolución last-writer-wins.
+    /// Solo sobrescribe si `timestamp` es mayor al registrado; si no hay
+    /// marca previa, equivale a `put`. Retorna true si escribió.
+    pub fn put_timestamped(&mut self, key: &[u8], value: &[u8], timestamp: u64) -> bool {
+        if let Some(&prev) = self.key_timestamps.get(key) {
+            if timestamp <= prev {
+                return false;
+            }
+        }
+        self.put(key, value);
+        self.key_timestamps.insert(key.to_vec(), timestamp);
+        true
     }
 
     /// Recupera datos por clave.
@@ -248,5 +265,15 @@ mod tests {
         store.put(b"key_beta", b"valor_dos");
         assert!(store.get(b"key_alpha").is_some());
         assert!(store.get(b"key_beta").is_some());
+    }
+    #[test]
+    fn put_timestamped_last_writer_wins() {
+        let mut store = ResonantStore::new(0, 6);
+        assert!(store.put_timestamped(b"k", b"viejo", 10));
+        assert!(!store.put_timestamped(b"k", b"atrasado", 5));
+        assert!(!store.put_timestamped(b"k", b"igual", 10));
+        assert!(store.put_timestamped(b"k", b"nuevo", 20));
+        let data = store.get(b"k").expect("la clave debe existir");
+        assert_eq!(&data[..5], b"nuevo");
     }
 }
