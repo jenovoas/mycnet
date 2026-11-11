@@ -61,6 +61,8 @@ pub struct SentinelFractalBridge {
     ptr: *mut u8,
     fd: i32,
     last_tail: u64,
+    /// Identidad del archivo mapeado (dev, ino) para detectar recreación.
+    file_id: (u64, u64),
 }
 
 unsafe impl Send for SentinelFractalBridge {}
@@ -72,13 +74,19 @@ impl SentinelFractalBridge {
     }
 
     pub fn open_named(name: &str) -> Result<Self, SentinelBridgeError> {
-        let c_name = CString::new(name).map_err(|e| SentinelBridgeError::InvalidName(e.to_string()))?;
-        let expected_size = std::mem::size_of::<FractalRingHeader>() + FRACTAL_SEEDS_CAPACITY * std::mem::size_of::<HolographicSeedBinary>();
+        let c_name =
+            CString::new(name).map_err(|e| SentinelBridgeError::InvalidName(e.to_string()))?;
+        let expected_size = std::mem::size_of::<FractalRingHeader>()
+            + FRACTAL_SEEDS_CAPACITY * std::mem::size_of::<HolographicSeedBinary>();
 
         unsafe {
             let fd = libc::shm_open(c_name.as_ptr(), libc::O_RDONLY, 0);
             if fd == -1 {
-                return Err(SentinelBridgeError::ShmOpen(format!("{}: errno={}", name, std::io::Error::last_os_error())));
+                return Err(SentinelBridgeError::ShmOpen(format!(
+                    "{}: errno={}",
+                    name,
+                    std::io::Error::last_os_error()
+                )));
             }
 
             let mut stat: libc::stat = std::mem::zeroed();
@@ -108,7 +116,11 @@ impl SentinelFractalBridge {
 
             if ptr == libc::MAP_FAILED {
                 libc::close(fd);
-                return Err(SentinelBridgeError::Mmap(format!("{}: errno={}", name, std::io::Error::last_os_error())));
+                return Err(SentinelBridgeError::Mmap(format!(
+                    "{}: errno={}",
+                    name,
+                    std::io::Error::last_os_error()
+                )));
             }
 
             Ok(Self {
@@ -117,28 +129,68 @@ impl SentinelFractalBridge {
                 ptr: ptr as *mut u8,
                 fd,
                 last_tail: 0,
+                file_id: (stat.st_dev as u64, stat.st_ino as u64),
             })
+        }
+    }
+    fn current_file_id(name: &str) -> Option<(u64, u64)> {
+        let c_name = CString::new(name).ok()?;
+        unsafe {
+            let fd = libc::shm_open(c_name.as_ptr(), libc::O_RDONLY, 0);
+            if fd == -1 {
+                return None;
+            }
+            let mut stat: libc::stat = std::mem::zeroed();
+            let id = if libc::fstat(fd, &mut stat) == -1 {
+                None
+            } else {
+                Some((stat.st_dev as u64, stat.st_ino as u64))
+            };
+            libc::close(fd);
+            id
         }
     }
 
     /// Lee semillas nuevas pendientes desde el ring buffer hacia un vector.
+    /// Si el archivo SHM fue recreado (unlink+create), reabre el mapeo y
+    /// reinicia el cursor para no leer un archivo borrado eternamente.
     pub fn poll_new_seeds(&mut self, max_seeds: usize) -> Vec<HolographicSeedBinary> {
-        if self.ptr.is_null() { return Vec::new(); }
+        if self.ptr.is_null() {
+            return Vec::new();
+        }
+        // Solo reabrir si el archivo existe con identidad distinta (recreado).
+        // Si no existe (anillo anónimo de tests), conservar el mapeo actual.
+        if let Some(current) = Self::current_file_id(&self.name) {
+            if current != self.file_id {
+                *self = match Self::open_named(&self.name.clone()) {
+                    Ok(reopened) => reopened,
+                    Err(_) => return Vec::new(),
+                };
+            }
+        }
 
         let header = unsafe { &*(self.ptr as *const FractalRingHeader) };
         let head = header.head.load(Ordering::Acquire);
         // A reset cannot leave this reader waiting for the old cursor forever.
-        let tail = if head < self.last_tail { 0 } else { self.last_tail };
+        let tail = if head < self.last_tail {
+            0
+        } else {
+            self.last_tail
+        };
         // Slots older than this window were overwritten; never replay their
         // replacements at obsolete sequence positions.
         let tail = tail.max(head.saturating_sub(FRACTAL_SEEDS_CAPACITY as u64));
-        if head == tail { return Vec::new(); }
+        if head == tail {
+            return Vec::new();
+        }
 
         let available = (head - tail) as usize;
         let count = available.min(max_seeds).min(FRACTAL_SEEDS_CAPACITY);
         let mut out = Vec::with_capacity(count);
 
-        let seeds_base = unsafe { self.ptr.add(std::mem::size_of::<FractalRingHeader>()) as *const HolographicSeedBinary };
+        let seeds_base = unsafe {
+            self.ptr.add(std::mem::size_of::<FractalRingHeader>()) as *const HolographicSeedBinary
+        };
 
         for i in 0..count {
             let slot = ((tail + i as u64) % FRACTAL_SEEDS_CAPACITY as u64) as usize;
@@ -183,7 +235,9 @@ pub struct SentinelSPA {
 impl SentinelSPA {
     /// Convierte el SPA crudo leído del SHM al tipo `SPA` soberano de mycnet.
     pub fn to_mycnet_spa(self) -> SPA {
-        SPA { components: self.components }
+        SPA {
+            components: self.components,
+        }
     }
 }
 
@@ -220,7 +274,11 @@ pub enum SentinelBridgeError {
     #[error("mmap falló: {0}")]
     Mmap(String),
     #[error("Tamaño SHM ({shm_size}) insuficiente para {expected} nodos (req {required} bytes)")]
-    BufferTooSmall { shm_size: usize, expected: usize, required: usize },
+    BufferTooSmall {
+        shm_size: usize,
+        expected: usize,
+        required: usize,
+    },
     #[error("Nombre SHM inválido: {0}")]
     InvalidName(String),
     #[error("Error de IO: {0}")]
@@ -257,9 +315,8 @@ impl SentinelBridge {
 
     /// Abre un SHM con nombre custom (para tests u otros nodos sentinel).
     pub fn open_named(name: &str) -> Result<Self, SentinelBridgeError> {
-        let c_name = CString::new(name).map_err(|e| {
-            SentinelBridgeError::InvalidName(format!("{}: {}", name, e))
-        })?;
+        let c_name = CString::new(name)
+            .map_err(|e| SentinelBridgeError::InvalidName(format!("{}: {}", name, e)))?;
 
         // O_RDWR sin O_CREAT — somos lectores, no creadores.
         // 0o666 perms: respetamos los que sentinel haya dejado.
@@ -321,7 +378,9 @@ impl SentinelBridge {
     }
 
     /// Tamaño del segmento SHM en bytes (reportado por fstat al abrir).
-    pub fn shm_size(&self) -> usize { self.shm_size }
+    pub fn shm_size(&self) -> usize {
+        self.shm_size
+    }
 
     /// Número de nodos `IsochronousOscillator` que calen en el SHM actual.
     pub fn capacity(&self) -> usize {
@@ -329,7 +388,9 @@ impl SentinelBridge {
     }
 
     /// Número de nodos reportados en el último `refresh_into_lattice`.
-    pub fn node_count(&self) -> usize { self.node_count }
+    pub fn node_count(&self) -> usize {
+        self.node_count
+    }
 
     /// Lee el lattice SHM como slice inmutable.
     ///
@@ -370,13 +431,13 @@ impl SentinelBridge {
         // mycnet — produce el mismo ordenamiento que `LiquidLattice::inject`.
         let mut sorted: Vec<Coord> = lattice.nodes.keys().copied().collect();
         let origin = Coord { q: 0, r: 0 };
-        sorted.sort_by_key(|c| {
-            ((c.q - origin.q).abs()) + ((c.r - origin.r).abs())
-        });
+        sorted.sort_by_key(|c| ((c.q - origin.q).abs()) + ((c.r - origin.r).abs()));
 
         let mut projected = 0usize;
         for (i, coord) in sorted.iter().enumerate() {
-            if i >= sentinel_count { break; }
+            if i >= sentinel_count {
+                break;
+            }
             let osc = &sentinel_nodes[i];
 
             if let Some(node) = lattice.nodes.get_mut(coord) {
@@ -437,19 +498,35 @@ mod tests {
         let size = std::mem::size_of::<FractalRingHeader>()
             + FRACTAL_SEEDS_CAPACITY * std::mem::size_of::<HolographicSeedBinary>();
         let mapping = unsafe {
-            libc::mmap(ptr::null_mut(), size, libc::PROT_READ | libc::PROT_WRITE,
-                libc::MAP_SHARED | libc::MAP_ANONYMOUS, -1, 0)
+            libc::mmap(
+                ptr::null_mut(),
+                size,
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_SHARED | libc::MAP_ANONYMOUS,
+                -1,
+                0,
+            )
         };
         assert_ne!(mapping, libc::MAP_FAILED);
         unsafe {
-            ptr::write(mapping.cast::<FractalRingHeader>(), FractalRingHeader {
-                magic: 0x5346_5231, version: 1,
-                head: AtomicU64::new(0), tail: AtomicU64::new(0), reserved: [0; 40],
-            });
+            ptr::write(
+                mapping.cast::<FractalRingHeader>(),
+                FractalRingHeader {
+                    magic: 0x5346_5231,
+                    version: 1,
+                    head: AtomicU64::new(0),
+                    tail: AtomicU64::new(0),
+                    reserved: [0; 40],
+                },
+            );
         }
         SentinelFractalBridge {
-            name: "anonymous-test-ring".into(), shm_size: size,
-            ptr: mapping.cast(), fd: -1, last_tail: 0,
+            name: "anonymous-test-ring".into(),
+            shm_size: size,
+            ptr: mapping.cast(),
+            fd: -1,
+            last_tail: 0,
+            file_id: (0, 0),
         }
     }
 
@@ -459,7 +536,9 @@ mod tests {
         let slot = (head % FRACTAL_SEEDS_CAPACITY as u64) as usize;
         let seed = HolographicSeedBinary::new(token, 0, 0, 0, i64::from(token), 0, 10, 1);
         unsafe {
-            let base = bridge.ptr.add(std::mem::size_of::<FractalRingHeader>())
+            let base = bridge
+                .ptr
+                .add(std::mem::size_of::<FractalRingHeader>())
                 .cast::<HolographicSeedBinary>();
             ptr::write(base.add(slot), seed);
         }
@@ -473,11 +552,15 @@ mod tests {
             publish_test_seed(&bridge, token);
         }
         let first = bridge.poll_new_seeds(32);
-        assert_eq!(first.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
-            (40..72).collect::<Vec<_>>());
+        assert_eq!(
+            first.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
+            (40..72).collect::<Vec<_>>()
+        );
         let rest = bridge.poll_new_seeds(FRACTAL_SEEDS_CAPACITY);
-        assert_eq!(rest.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
-            (72..FRACTAL_SEEDS_CAPACITY as u32 + 40).collect::<Vec<_>>());
+        assert_eq!(
+            rest.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
+            (72..FRACTAL_SEEDS_CAPACITY as u32 + 40).collect::<Vec<_>>()
+        );
         assert!(bridge.poll_new_seeds(32).is_empty());
         publish_test_seed(&bridge, 2000);
         assert_eq!(bridge.poll_new_seeds(32)[0].token_id, 2000);
@@ -495,7 +578,10 @@ mod tests {
         assert!(bridge.poll_new_seeds(32).is_empty());
         publish_test_seed(&bridge, 9000);
         let seeds = bridge.poll_new_seeds(32);
-        assert_eq!(seeds.iter().map(|seed| seed.token_id).collect::<Vec<_>>(), [9000]);
+        assert_eq!(
+            seeds.iter().map(|seed| seed.token_id).collect::<Vec<_>>(),
+            [9000]
+        );
         assert!(bridge.poll_new_seeds(32).is_empty());
     }
 
@@ -512,7 +598,9 @@ mod tests {
 
     #[test]
     fn sentinel_spa_roundtrips_to_mycnet_spa() {
-        let raw = SentinelSPA { components: [1, 32, 2, 24, 0] }; // Plimpton 322 fila 12
+        let raw = SentinelSPA {
+            components: [1, 32, 2, 24, 0],
+        }; // Plimpton 322 fila 12
         let spa = raw.to_mycnet_spa();
         assert_eq!(spa, SPA::new(1, 32, 2, 24, 0));
     }
@@ -529,8 +617,8 @@ mod tests {
         // Con SHM inexistente, refresh no puede probarse end-to-end sin
         // sentinel-cortex corriendo. Verificamos al menos que no paniquea.
         let mut lattice = LiquidLattice::new(1); // 7 nodos hex
-        // No podemos abrir un SHM real, así que solo exercise el sort y el
-        // branch "0 nodos sentinel" sin panic.
+                                                 // No podemos abrir un SHM real, así que solo exercise el sort y el
+                                                 // branch "0 nodos sentinel" sin panic.
         let mut bridge = SentinelBridge {
             name: "test".into(),
             shm_size: 0,
