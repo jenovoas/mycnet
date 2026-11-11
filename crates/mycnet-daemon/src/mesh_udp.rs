@@ -314,6 +314,17 @@ mod tests {
             .ingest_remote_seed(other_seed, other_src)
             .await
             .unwrap();
+        // Memoria colectiva: la semilla remota aparece en ResonantStore bajo
+        // su token_id (proyección holográfica con pérdida, no bytes idénticos).
+        let stored = state
+            .kv_store
+            .lock()
+            .await
+            .get(&received_packet.seed.token_id.to_le_bytes());
+        assert!(
+            stored.is_some(),
+            "ingest_remote_seed debe expandir la semilla al store local"
+        );
         assert_eq!(state.fractal_seeds_ingested.load(Ordering::Relaxed), 2);
         assert_eq!(
             state
