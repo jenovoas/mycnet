@@ -56,6 +56,15 @@ mycnet/
 ```
 
 ---
+## Replicación KV de metadatos
+
+El contrato integrado MYKV v1, sus límites y la evidencia histórica están en
+[`docs/MYKV_V1.md`](docs/MYKV_V1.md), con
+[especificación normativa](openspec/specs/memory/kv-metadata-replication/spec.md).
+Replica clave, timestamp, semilla y hash; no transporta ni recupera el payload
+original y no acredita despliegue. Para observaciones operativas fechadas,
+ver [`docs/INFRAESTRUCTURA.md`](docs/INFRAESTRUCTURA.md).
+
 
 ## ⚡ Benchmarking y Comandos Rápidos
 

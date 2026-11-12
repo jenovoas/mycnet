@@ -78,78 +78,18 @@ La metodología reproducible y el benchmark están en [`docs/benchmarks/METODOLO
 
 El repositorio contiene `HolographicSyncEngine` (`crates/mycnet-memory/src/holographic_sync.rs`), `HolographicSeed` y mecanismos de expansión. La presencia de estas capacidades en el código no demuestra sincronización correcta entre nodos desplegados.
 
-### Canal KV MYKV v1 — implementación en rama, 2026-11-11
+### Canal KV MYKV v1 — implementación integrada, 2026-11-11
 
-Este canal es independiente del ring multi-productor y del tráfico fractal
-legacy de **40 bytes**: no cambia su layout, el tick ni las ventanas OU.
-Comparte el listener UDP (`MYCNET_UDP_BIND`, por defecto `0.0.0.0:4242`).
-Lo siguiente describe código y pruebas escritas; no acredita despliegue ni
-pruebas ejecutadas de esta rama.
+El canal de replicación de metadatos está integrado y publicado en `main`,
+fuente MyCNet `e8cb1ad`. Su contrato wire, autorización, ACK/retry, límites,
+LWW, consulta HTTP y evidencia histórica de pruebas y smoke se documentan en
+[`MYKV_V1.md`](MYKV_V1.md); la conducta normativa está en la
+[spec de replicación KV](../openspec/specs/memory/kv-metadata-replication/spec.md).
 
-La envoltura variable mide `80 + key_len` bytes (81–592), little-endian:
-
-| Bytes | Contenido |
-|---|---|
-| 0–3 | ASCII `MYKV` |
-| 4 | Tipo: 1 Publish, 2 Replicate, 3 Ack, 4 Committed |
-| 5 | Versión 1 |
-| 6–7 | Longitud UTF-8 de clave, 1–512 bytes |
-| 8–15 | Timestamp original del store en nanosegundos |
-| 16–47 | Semilla binaria original de 32 bytes, con su CRC existente |
-| 48–79 | BLAKE3 del payload, 32 bytes |
-| 80–fin | Clave UTF-8 completa |
-
-Solo se admiten prefijos `crystal-` y `portal-metrics-`. Publish requiere IP
-loopback; Replicate y Ack requieren coincidencia **IP y puerto** con un peer
-de `MYCNET_PEERS`. La validación de formato/CRC no es autenticación criptográfica:
-la frontera privada sigue siendo WireGuard/firewall. No se abre un protocolo
-público autenticado.
-
-El store KV conserva la semilla exacta y el hash como metadatos, separados de
-`put`/`put_timestamped` legacy y de su proyección con pérdida. LWW compara
-lexicográficamente `(timestamp_ns, payload_hash, seed_bytes)`; una versión
-duplicada o superada no se reinyecta al lattice. Un Ack se emite únicamente
-tras aceptación LWW (incluida una versión determinísticamente superada);
-un error de aplicación/capacidad no emite Ack.
-
-Publish mantiene hasta **256 identidades pendientes globales**, por tanto
-como máximo 256 por peer, con un último remitente local por identidad.
-Reenvía únicamente a peers que aún no dieron Ack cada 100 ms, conservando
-timestamp e identidad. No usa ni alimenta las ventanas OU fractales.
-Committed ecoa la identidad completa solo después de Ack de **todos** los
-peers configurados; sin peers no confirma éxito. Con pendientes llenos no
-admite otra identidad: el cliente debe reintentar la misma publicación.
-Si se pierde Committed, el nuevo Publish vuelve a reunir Ack de todos los
-peers, sin caché ilimitada de confirmaciones ni reinyección del duplicado.
-
-El store exacto admite **4096 claves**, sin eviction que pudiera olvidar LWW.
-Lleno, rechaza claves nuevas pero permite duplicados y actualizaciones de
-claves existentes. Tanto metadatos como pendientes son **volátiles**: no
-existe garantía de durabilidad frente a reinicio ni recuperación automática
-de lo que se perdió con el proceso.
-
-`GET /api/v1/kv-metadata?key=<clave UTF-8 escapada>` consulta exclusivamente
-metadatos del store local: `present`, `timestamp_ns`, `seed_bytes` (array32),
-`payload_hash` (array32) y `payload_available:false`. No transporta ni
-recupera el payload original y no implementa recall remoto. El endpoint
-debug legacy `/api/v1/kv/:token` permanece separado.
-
-Verificación local 2026-11-11, después de completar implementación:
-- Publicador Sentinel: 12/12; daemon MyCNet: 14/14; LWW exacto: 5/5;
-  aritmética SPA: 6/6; lattice: 7/7. Storage legacy: 4/4 en la primera tanda.
-- Clippy estricto y builds de ambos binarios aprobados.
-- Smoke cruzado con tres procesos y UDP loopback reales: se descartaron una
-  réplica y un ACK; confirmación inicial en 163 ms, metadatos idénticos en los
-  tres nodos, empate temporal resuelto por hash, versión antigua y duplicados
-  sin cambiar la ganadora, origen no configurado rechazado.
-- Peer ausente: timeout del productor sin falso Committed pese a réplica parcial;
-  al reiniciar ese peer aislado, los reintentos completaron su almacenamiento.
-- El primer smoke reveló overflow en sumas i64 de coherencia: corregido mediante
-  medias acumuladas en i128 antes de dividir, también para regiones y vecinos.
-  `SPA::from_raw` usa cociente/resto con signo y admite `i64::MIN` sin `abs()`.
-  Regresiones cubren extremos y promedios exactos; el smoke posterior aprobó.
-- Todos los procesos de prueba terminaron. Sin despliegue, cambios de servicios,
-  pausas de Cortex ni medición nueva en la malla real.
+La integración no acredita despliegue ni sustituye la medición pendiente en
+la malla real. Solo replica metadatos, no el payload original; conserva sin
+cambios el ring y tráfico fractal legacy de 40 bytes. Las observaciones de
+infraestructura anteriores siguen siendo comprobaciones históricas fechadas.
 
 ## Recuperación Guardian y alta de Marte — 2026-10-30/31
 
