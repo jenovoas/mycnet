@@ -1,1214 +1,1256 @@
 {
   ".claude/settings.json": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2261107,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.96426,
     "ast_hash": "67c24fc8f0d5655e4e36c8a3533e1d58",
     "semantic_hash": ""
   },
   ".codebuddy/settings.json": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226123,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642704,
     "ast_hash": "ad91fa4f99093884d202fcc5dceb58ad",
     "semantic_hash": ""
   },
   ".gemini/hooks/crg-session-start.sh": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226128,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642754,
     "ast_hash": "680296745559b7dc6159d9af878b0fdf",
     "semantic_hash": ""
   },
   ".gemini/hooks/crg-update.sh": {
-    "mtime": 1794440151.9626486,
-    "seen": 1794440731.2261305,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642785,
     "ast_hash": "491a00c1f212a87032f83e16f1b0f950",
     "semantic_hash": ""
   },
   ".gemini/settings.json": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.226133,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642806,
     "ast_hash": "7589dc5da07037f4af88fd4b70b69c87",
     "semantic_hash": ""
   },
   ".qoder/mcp.json": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2261348,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642825,
     "ast_hash": "24ecc62b491a5ca71efff5111f8c1800",
     "semantic_hash": ""
   },
   ".qoder/settings.json": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2261372,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642842,
     "ast_hash": "7062f9f2dd6f163d52158fe5f8b4f82b",
     "semantic_hash": ""
   },
   "Cargo.toml": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261388,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642866,
     "ast_hash": "15337766909885dd420d6eb41cd9ba3e",
     "semantic_hash": ""
   },
   "config/prometheus.yml": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2261407,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9642885,
     "ast_hash": "1eb6d8a5d2319f93d2e2cd43f52a88e3",
     "semantic_hash": ""
   },
   "crates/mycnet-connect/Cargo.toml": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261424,
-    "ast_hash": "c268a95e62f3faaf12bfd67025807b69",
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.9642906,
+    "ast_hash": "18158822caac68ecb7fffa047d0bc872",
     "semantic_hash": ""
   },
   "crates/mycnet-connect/src/client.rs": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261443,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964295,
     "ast_hash": "50128888c76857246dedde595a4a69f4",
     "semantic_hash": ""
   },
   "crates/mycnet-connect/src/lib.rs": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261462,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964297,
     "ast_hash": "f9f03f96188b444c2e43ce45c6fd2a20",
     "semantic_hash": ""
   },
   "crates/mycnet-connect/src/types.rs": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261481,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9642987,
     "ast_hash": "28bd192dff17650771567c33133577a0",
     "semantic_hash": ""
   },
   "crates/mycnet-core/Cargo.toml": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261496,
-    "ast_hash": "95d335ccf4b1fc58315f1ffa959348da",
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.9643006,
+    "ast_hash": "b099e54d6833b11895916a75fd9f550d",
     "semantic_hash": ""
   },
   "crates/mycnet-core/src/adm.rs": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261515,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9643042,
     "ast_hash": "8acf0ca393a2496b07068d504c7a9bed",
     "semantic_hash": ""
   },
   "crates/mycnet-core/src/lib.rs": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.226153,
+    "mtime": 1793640749.643455,
+    "seen": 1794463284.964306,
     "ast_hash": "a8e61bc52349310d0f7f43e8f8b0b7c6",
     "semantic_hash": ""
   },
   "crates/mycnet-core/src/mesh.rs": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2261546,
+    "mtime": 1793666710.2442708,
+    "seen": 1794463284.964308,
     "ast_hash": "ecef6d49caeaacaabad40509b57fbeb3",
     "semantic_hash": ""
   },
   "crates/mycnet-core/src/predict.rs": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226156,
+    "mtime": 1793640749.643455,
+    "seen": 1794463284.9643097,
     "ast_hash": "9f8211d3902907420ce94ef3017474e4",
     "semantic_hash": ""
   },
   "crates/mycnet-core/src/s60.rs": {
-    "mtime": 1794440847.8077996,
-    "seen": 1794441096.1283607,
+    "mtime": 1794441167.5281427,
+    "seen": 1794463284.9643116,
     "ast_hash": "3e6932d661cdc77d2bf7b92caa2a7471",
     "semantic_hash": ""
   },
   "crates/mycnet-core/src/yhwh.rs": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2261586,
+    "mtime": 1793301840.6177955,
+    "seen": 1794463284.964313,
     "ast_hash": "1cb3ab5864d7cc50eda6c6cbeaf6e902",
     "semantic_hash": ""
   },
   "crates/mycnet-daemon/Cargo.toml": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.22616,
-    "ast_hash": "a26736ff1afbaea9a17ca1d1f1a6fdee",
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.9643145,
+    "ast_hash": "ebad4f7302c54b1f082d1ab3886e4e99",
     "semantic_hash": ""
   },
   "crates/mycnet-daemon/src/api.rs": {
-    "mtime": 1794440674.9057772,
-    "seen": 1794440731.2261615,
+    "mtime": 1794441167.5281427,
+    "seen": 1794463284.9643173,
     "ast_hash": "1cb1cf107d3a41ec09ecbf7cc8450da4",
     "semantic_hash": ""
   },
   "crates/mycnet-daemon/src/bin/guardian_uplink.rs": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2261634,
+    "mtime": 1794439040.9923773,
+    "seen": 1794463284.9643195,
     "ast_hash": "9bd62d22ab38d7a4d223626027d655de",
     "semantic_hash": ""
   },
   "crates/mycnet-daemon/src/main.rs": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2261653,
+    "mtime": 1794439040.9923773,
+    "seen": 1794463284.9643211,
     "ast_hash": "63bb46f87fbd7d3a6f88f779a81fc49b",
     "semantic_hash": ""
   },
   "crates/mycnet-daemon/src/mesh_udp.rs": {
-    "mtime": 1794440674.8977773,
-    "seen": 1794440731.226167,
+    "mtime": 1794441167.5281427,
+    "seen": 1794463284.9643226,
     "ast_hash": "d7580c05c7ed249228655490d0dd9819",
     "semantic_hash": ""
   },
   "crates/mycnet-daemon/src/state.rs": {
-    "mtime": 1794440322.7818048,
-    "seen": 1794440731.2261684,
+    "mtime": 1794441167.5281427,
+    "seen": 1794463284.964324,
     "ast_hash": "981535733b9330a1a5e9273990c33f65",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/Cargo.toml": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.22617,
-    "ast_hash": "0afeed471e3d9af02f4151403a3924af",
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.9643257,
+    "ast_hash": "1190c6c91c612eb93a349d8154f8d263",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/holographic_sync.rs": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2261717,
+    "mtime": 1794439404.7242463,
+    "seen": 1794463284.9643292,
     "ast_hash": "1446606699e5441c1d690835920be80b",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/lattice.rs": {
-    "mtime": 1794440935.306799,
-    "seen": 1794441096.12859,
+    "mtime": 1794441167.5281427,
+    "seen": 1794463284.9643316,
     "ast_hash": "29a4e39f39a909b6bc540531da87a013",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/lib.rs": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2261748,
+    "mtime": 1794439404.7242463,
+    "seen": 1794463284.9643335,
     "ast_hash": "939c1971b76f3281f5bfbc2c29b54c51",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/phase_gate.rs": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226176,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9643352,
     "ast_hash": "536e74325933303ef5137163f8e9291d",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/sentinel_bridge.rs": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2261775,
+    "mtime": 1794439385.2844672,
+    "seen": 1794463284.9643369,
     "ast_hash": "8e3929f5887ba1992af047da1e31914e",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/storage.rs": {
-    "mtime": 1794440674.9097772,
-    "seen": 1794440731.226179,
+    "mtime": 1794441167.5281427,
+    "seen": 1794463284.964338,
     "ast_hash": "84d0ae2f7851673d8cf7a01f593e0758",
     "semantic_hash": ""
   },
   "crates/mycnet-memory/src/sync.rs": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2261803,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9643397,
     "ast_hash": "93d9a9e8c209734dd717d97d0dd78ecd",
     "semantic_hash": ""
   },
   "docker-compose.yml": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226182,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9643412,
     "ast_hash": "3035894aa3fef51798e552733c93b292",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-broadcast-malla-semillas-fractales/.openspec.yaml": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2261832,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643426,
     "ast_hash": "8dfaa8cd20c69c4d7e4c6084bf72e5ff",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-comprecion-fractal-lattice/.openspec.yaml": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2261846,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643443,
     "ast_hash": "8dfaa8cd20c69c4d7e4c6084bf72e5ff",
     "semantic_hash": ""
   },
   "openspec/changes/remediate-rust-advisories-clippy-warnings/.openspec.yaml": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.226186,
+    "mtime": 1793719039.5633764,
+    "seen": 1794463284.9643457,
     "ast_hash": "e48540a85cd94002ce6e790aeac5a745",
     "semantic_hash": ""
   },
   "openspec/config.yaml": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2261875,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643471,
     "ast_hash": "ce5bc0e150d2d7fa7fed9452ef32cb29",
     "semantic_hash": ""
   },
   "scripts/benchmark_comparativo_transportes.py": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2261891,
+    "mtime": 1793266271.9743052,
+    "seen": 1794463284.9643486,
     "ast_hash": "21d891e45e60e8a720c11e9e97d76ffc",
     "semantic_hash": ""
   },
   "scripts/benchmark_mycnet_transfer.py": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2261906,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643502,
     "ast_hash": "aa12fb77f72559ed3c00e8b693da2c6f",
     "semantic_hash": ""
   },
   "scripts/benchmark_network_matrix.py": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2261922,
+    "mtime": 1793265224.4449449,
+    "seen": 1794463284.9643514,
     "ast_hash": "a15bbc7f670dfbf9b27b22f2f080bc5a",
     "semantic_hash": ""
   },
   "scripts/ceph_yhwh_tuner.sh": {
-    "mtime": 1794440151.9677577,
-    "seen": 1794440731.226194,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.964353,
     "ast_hash": "dbe9b81dbb0901e385768d876f6aa491",
     "semantic_hash": ""
   },
   "scripts/install-interceptor.sh": {
-    "mtime": 1794440151.9677577,
-    "seen": 1794440731.2261972,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643543,
     "ast_hash": "4c3dd34560a656f9fe7ffd25e96940be",
     "semantic_hash": ""
   },
   "scripts/mesh_setup.sh": {
-    "mtime": 1794440151.9700983,
-    "seen": 1794440731.2261987,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643555,
     "ast_hash": "14ca3d02e9523617c4f0b991637613cd",
     "semantic_hash": ""
   },
   "scripts/minio_deploy.sh": {
-    "mtime": 1794440151.9701543,
-    "seen": 1794440731.2262,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643571,
     "ast_hash": "2dfab1f7ebba1cb93f2f1774705cd728",
     "semantic_hash": ""
   },
   "scripts/mycnet-batctl-snapshot.sh": {
-    "mtime": 1794440151.970194,
-    "seen": 1794440731.2262018,
+    "mtime": 1793666700.5763764,
+    "seen": 1794463284.9643583,
     "ast_hash": "8cbabdfd30d71c3e6e910433cf596f37",
     "semantic_hash": ""
   },
   "scripts/mycnet-batman.sh": {
-    "mtime": 1794440151.970194,
-    "seen": 1794440731.2262032,
+    "mtime": 1793258897.3686683,
+    "seen": 1794463284.9643598,
     "ast_hash": "76e3bf24b65ecfc862acb813b2a0bf2a",
     "semantic_hash": ""
   },
   "scripts/mycnet_s60_monitor.py": {
-    "mtime": 1794440151.970194,
-    "seen": 1794440731.2262044,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9643612,
     "ast_hash": "a7103b72da5f8dc6bfc91640891937ce",
     "semantic_hash": ""
   },
   ".agent/skills/openspec-apply-change/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262056,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.964364,
     "ast_hash": "fcb796d79391da1c895fddae250c25bd",
     "semantic_hash": ""
   },
   ".agent/skills/openspec-archive-change/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262073,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.9643652,
     "ast_hash": "01b4b927f8295160fa58721db97506cb",
     "semantic_hash": ""
   },
   ".agent/skills/openspec-explore/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262087,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.964367,
     "ast_hash": "7cf64862b37a3e274f812cdfca93c95d",
     "semantic_hash": ""
   },
   ".agent/skills/openspec-propose/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262104,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.964368,
     "ast_hash": "b596a66394cb7c992809ef3afc54ef1a",
     "semantic_hash": ""
   },
   ".agent/skills/openspec-sync-specs/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262115,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.9643693,
     "ast_hash": "9cd36d9a5e25247b10d94a518e423752",
     "semantic_hash": ""
   },
   ".agent/skills/openspec-update-change/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262137,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.9643707,
     "ast_hash": "dcb19e8eff6daaf3a8eafd92dd780489",
     "semantic_hash": ""
   },
   ".agent/workflows/opsx-apply.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262151,
+    "mtime": 1793218974.9290876,
+    "seen": 1794463284.9643722,
     "ast_hash": "d93420623417d1a2d97058a9ca76fe2b",
     "semantic_hash": ""
   },
   ".agent/workflows/opsx-archive.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262168,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643738,
     "ast_hash": "aacb47e2a3471ccad642c74b3344fd82",
     "semantic_hash": ""
   },
   ".agent/workflows/opsx-explore.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226218,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964375,
     "ast_hash": "7d088f3aaca49c57627924fb7dbb3918",
     "semantic_hash": ""
   },
   ".agent/workflows/opsx-propose.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262194,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643767,
     "ast_hash": "34184507f15ff98d89bc251d050d8731",
     "semantic_hash": ""
   },
   ".agent/workflows/opsx-sync.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226221,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964378,
     "ast_hash": "30f06a002a0f6bd461661c7814cefd14",
     "semantic_hash": ""
   },
   ".agent/workflows/opsx-update.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262223,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643793,
     "ast_hash": "14ddea249bb9875add1c5e56facbd920",
     "semantic_hash": ""
   },
   ".agents/skills/sentinel-comprehension/SKILL.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262242,
+    "mtime": 1793265611.229014,
+    "seen": 1794463284.9643807,
     "ast_hash": "a73ea176969ad341dc776ca0c1dfe4b1",
     "semantic_hash": ""
   },
   ".agents/skills/sentinel-knowledge-layer/SKILL.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262256,
+    "mtime": 1793265611.229014,
+    "seen": 1794463284.964382,
     "ast_hash": "d5b236bd05367a9ed50f0330e06f373f",
     "semantic_hash": ""
   },
   ".agents/skills/sentinel-s60-stack/SKILL.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262275,
+    "mtime": 1793265611.229014,
+    "seen": 1794463284.9643836,
     "ast_hash": "257cb80ddb12a1281f9d09d7fbb1fd58",
     "semantic_hash": ""
   },
   ".agents/skills/sentinel-s60-stack/references/deployment_bpftool.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226229,
+    "mtime": 1793265611.229014,
+    "seen": 1794463284.964385,
     "ast_hash": "39007c2837c0463ab0edc8775e29bc47",
     "semantic_hash": ""
   },
   ".claude/commands/opsx/apply.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262304,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643862,
     "ast_hash": "02ef0a1fd105228ca82d57a97a62e418",
     "semantic_hash": ""
   },
   ".claude/commands/opsx/archive.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262316,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643877,
     "ast_hash": "f453ee64528afc02e430240cc27e7cde",
     "semantic_hash": ""
   },
   ".claude/commands/opsx/explore.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226233,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643888,
     "ast_hash": "e34236069468f19e8e5e222036a826ee",
     "semantic_hash": ""
   },
   ".claude/commands/opsx/propose.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262347,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.96439,
     "ast_hash": "91f4ef89493c8f7efe66cab5eca94960",
     "semantic_hash": ""
   },
   ".claude/commands/opsx/sync.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226236,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643917,
     "ast_hash": "429c9fbedcc6fe83c36fb1bbc34c96e0",
     "semantic_hash": ""
   },
   ".claude/commands/opsx/update.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262378,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964393,
     "ast_hash": "0e4881513eaa9f753165b34020247e4b",
     "semantic_hash": ""
   },
   ".claude/skills/debug-issue/SKILL.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226239,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643946,
     "ast_hash": "47ee6af0123d001644caf4d769f71d58",
     "semantic_hash": ""
   },
   ".claude/skills/explore-codebase/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262404,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964396,
     "ast_hash": "152f4d88cce98c4cc8a3624f9772a1b2",
     "semantic_hash": ""
   },
   ".claude/skills/openspec-apply-change/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.226242,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643974,
     "ast_hash": "eab842359b130b436d3b97c8c648e307",
     "semantic_hash": ""
   },
   ".claude/skills/openspec-archive-change/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262435,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9643989,
     "ast_hash": "66b3a62d4ed2e09720eb3268c2275a4f",
     "semantic_hash": ""
   },
   ".claude/skills/openspec-explore/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262452,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644,
     "ast_hash": "5054f2860f66afaf8fba66b3830ba7c7",
     "semantic_hash": ""
   },
   ".claude/skills/openspec-propose/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226247,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644017,
     "ast_hash": "1c44c83bbed8599ecc4c9a19f4d6f12e",
     "semantic_hash": ""
   },
   ".claude/skills/openspec-sync-specs/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262485,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964403,
     "ast_hash": "f394729d142fa9228d98c366402cf880",
     "semantic_hash": ""
   },
   ".claude/skills/openspec-update-change/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262502,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964404,
     "ast_hash": "d50eae983e5ce6147ac5675c799d72e5",
     "semantic_hash": ""
   },
   ".claude/skills/refactor-safely/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262518,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644058,
     "ast_hash": "4c7b46e6bea790b455b62c6eba17fa76",
     "semantic_hash": ""
   },
   ".claude/skills/review-changes/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262533,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964407,
     "ast_hash": "fa2bf3aa4f13eaeb6276d18677b4267c",
     "semantic_hash": ""
   },
   ".codebuddy/skills/debug-issue/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262547,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644086,
     "ast_hash": "47ee6af0123d001644caf4d769f71d58",
     "semantic_hash": ""
   },
   ".codebuddy/skills/explore-codebase/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262561,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644103,
     "ast_hash": "152f4d88cce98c4cc8a3624f9772a1b2",
     "semantic_hash": ""
   },
   ".codebuddy/skills/refactor-safely/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226257,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964412,
     "ast_hash": "4c7b46e6bea790b455b62c6eba17fa76",
     "semantic_hash": ""
   },
   ".codebuddy/skills/review-changes/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262588,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644134,
     "ast_hash": "fa2bf3aa4f13eaeb6276d18677b4267c",
     "semantic_hash": ""
   },
   ".gemini/skills/debug-issue/SKILL.md": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.2262602,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644148,
     "ast_hash": "47ee6af0123d001644caf4d769f71d58",
     "semantic_hash": ""
   },
   ".gemini/skills/explore-codebase/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262626,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644163,
     "ast_hash": "152f4d88cce98c4cc8a3624f9772a1b2",
     "semantic_hash": ""
   },
   ".gemini/skills/refactor-safely/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262638,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644177,
     "ast_hash": "4c7b46e6bea790b455b62c6eba17fa76",
     "semantic_hash": ""
   },
   ".gemini/skills/review-changes/SKILL.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262654,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644194,
     "ast_hash": "fa2bf3aa4f13eaeb6276d18677b4267c",
     "semantic_hash": ""
   },
   ".github/instructions/code-review-graph.instructions.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262666,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644206,
     "ast_hash": "0a13911770b8527845a9460bc03e472f",
     "semantic_hash": ""
   },
   ".kiro/steering/code-review-graph.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.226268,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964422,
     "ast_hash": "e79d3f3d9bf0adbc2b1e6c4c3234b690",
     "semantic_hash": ""
   },
   ".opencode/commands/opsx-apply.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262695,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644234,
     "ast_hash": "bcf1f5836a6eca8a15074022807142b5",
     "semantic_hash": ""
   },
   ".opencode/commands/opsx-archive.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226271,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644246,
     "ast_hash": "17c421daa6c8ce31d1e6a515231a7a14",
     "semantic_hash": ""
   },
   ".opencode/commands/opsx-explore.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262726,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644263,
     "ast_hash": "37ae9b1f35bdf3bd79b8910147921a8b",
     "semantic_hash": ""
   },
   ".opencode/commands/opsx-propose.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226274,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644272,
     "ast_hash": "2a94f7c1b43c34b0fa6c8bcdd29a49f6",
     "semantic_hash": ""
   },
   ".opencode/commands/opsx-sync.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226275,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964429,
     "ast_hash": "a5299ae9948dbdc48dbc73761a042974",
     "semantic_hash": ""
   },
   ".opencode/commands/opsx-update.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262764,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644303,
     "ast_hash": "7bba385698c112f2502ad1740bf26ff1",
     "semantic_hash": ""
   },
   ".opencode/skills/openspec-apply-change/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262776,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644318,
     "ast_hash": "fcb796d79391da1c895fddae250c25bd",
     "semantic_hash": ""
   },
   ".opencode/skills/openspec-archive-change/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226279,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644332,
     "ast_hash": "01b4b927f8295160fa58721db97506cb",
     "semantic_hash": ""
   },
   ".opencode/skills/openspec-explore/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262807,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644344,
     "ast_hash": "7cf64862b37a3e274f812cdfca93c95d",
     "semantic_hash": ""
   },
   ".opencode/skills/openspec-propose/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262824,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644353,
     "ast_hash": "b596a66394cb7c992809ef3afc54ef1a",
     "semantic_hash": ""
   },
   ".opencode/skills/openspec-sync-specs/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262838,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964437,
     "ast_hash": "9cd36d9a5e25247b10d94a518e423752",
     "semantic_hash": ""
   },
   ".opencode/skills/openspec-update-change/SKILL.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226285,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644382,
     "ast_hash": "dcb19e8eff6daaf3a8eafd92dd780489",
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1794440151.9557579,
-    "seen": 1794440731.2262864,
+    "mtime": 1793921796.173528,
+    "seen": 1794463284.9644396,
     "ast_hash": "f0e6edec95411d03687bda5961407322",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262876,
+    "mtime": 1793921796.1736784,
+    "seen": 1794463284.964441,
     "ast_hash": "159d948af73b5b83483451dc0eb039b6",
     "semantic_hash": ""
   },
   "CODEBUDDY.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262888,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644423,
     "ast_hash": "e79d3f3d9bf0adbc2b1e6c4c3234b690",
     "semantic_hash": ""
   },
   "ENGINEERING_MANIFESTO.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2262902,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964444,
     "ast_hash": "dd9b6ccd0d5f2d6a7566eac980e158f6",
     "semantic_hash": ""
   },
   "GEMINI.md": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.2262917,
+    "mtime": 1793921796.173789,
+    "seen": 1794463284.964445,
     "ast_hash": "b16a8d9f9a1f60ba0ebd1c34ae8c0022",
     "semantic_hash": ""
   },
   "PROTOCOLO_YATRA.md": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.226293,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.9644468,
     "ast_hash": "9a6290c2f9837f6838b61c7ea5bc8d9d",
     "semantic_hash": ""
   },
   "QODER.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262943,
+    "mtime": 1793218974.9330876,
+    "seen": 1794463284.964448,
     "ast_hash": "e79d3f3d9bf0adbc2b1e6c4c3234b690",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2262955,
-    "ast_hash": "428296c2a3bd7b8d40069b21c2b3eb19",
+    "mtime": 1794442076.297816,
+    "seen": 1794463284.9644492,
+    "ast_hash": "2ac566611457c4a5af9354518999bc7a",
     "semantic_hash": ""
   },
   "config/wireguard-mesh/README.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.226297,
+    "mtime": 1793265508.7820551,
+    "seen": 1794463284.9644506,
     "ast_hash": "f31c14ec6af95fc75cc4d197058876b3",
     "semantic_hash": ""
   },
   "docs/4_NODE_CHANGES.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.226298,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644518,
     "ast_hash": "e8fc4de637bdc7445bdb569e55a494d9",
     "semantic_hash": ""
   },
   "docs/4_NODE_QUICKSTART.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2263,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644535,
     "ast_hash": "f42d2cfa0d88e79812b8845e70ebace8",
     "semantic_hash": ""
   },
   "docs/AGENT_BRAIN.md": {
-    "mtime": 1794440151.9611876,
-    "seen": 1794440731.2263012,
+    "mtime": 1793279082.4913878,
+    "seen": 1794463284.9644544,
     "ast_hash": "517ae3fccd32f9b29485782b908cd0ad",
     "semantic_hash": ""
   },
   "docs/AUDITORIA_STALENESS_2026-08-23.md": {
-    "mtime": 1794440151.9626486,
-    "seen": 1794440731.2263024,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644558,
     "ast_hash": "d2aeee8ddc9b556cc7aef91fe7b8f8e7",
     "semantic_hash": ""
   },
   "docs/Arquitectura_Hibrida.md": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.2263038,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644575,
     "ast_hash": "c2533f0f3bfed487e15806e60db83794",
     "semantic_hash": ""
   },
   "docs/FirewallD.md": {
-    "mtime": 1794440151.962694,
-    "seen": 1794440731.226305,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644587,
     "ast_hash": "fb23b7cc200933a17291df1e4f1f3cd9",
     "semantic_hash": ""
   },
   "docs/Geometria_fractal.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263062,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644601,
     "ast_hash": "cfb75c781b029275f2bae0e36885110c",
     "semantic_hash": ""
   },
   "docs/INFRAESTRUCTURA.md": {
-    "mtime": 1794441047.8575115,
-    "seen": 1794441096.1307883,
-    "ast_hash": "414ba2e53325a2dd40bb6df70ee4b815",
+    "mtime": 1794457204.8937702,
+    "seen": 1794463284.9644613,
+    "ast_hash": "e0941a156486149e37aa0b75e8b68313",
     "semantic_hash": ""
   },
   "docs/MYCNET_IMPLEMENTATION_PLAN.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263088,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644628,
     "ast_hash": "bf9f06d676467a3add79baa3f2c77276",
     "semantic_hash": ""
   },
   "docs/Matematica Sexagesimal.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263103,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644659,
     "ast_hash": "464c7e4b9af52c50b39947fe44c60300",
     "semantic_hash": ""
   },
   "docs/Neural Memory (SNN).md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263117,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644675,
     "ast_hash": "33f4d47667424fad9948db04d14339ef",
     "semantic_hash": ""
   },
   "docs/OPENSPEC_001_FRACTAL_LATTICE_COMPRESSION_S60.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263126,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.964469,
     "ast_hash": "0699d4b2b77857ddc72624506e67e6db",
     "semantic_hash": ""
   },
   "docs/PAI60_ebpf_integration.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263143,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644706,
     "ast_hash": "aa027d793d624f86aa9acd6c196b01e5",
     "semantic_hash": ""
   },
   "docs/PAI60_integration.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263155,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644718,
     "ast_hash": "64be97a6ebf06c700c7312a22e77700e",
     "semantic_hash": ""
   },
   "docs/PHONONIC_RESEARCH.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263167,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644732,
     "ast_hash": "55a36eda087c25c6a27aae8d2ca2da96",
     "semantic_hash": ""
   },
   "docs/PHYSICS_CORE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263181,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.964475,
     "ast_hash": "866dc124a7333c36f98bfcdd9b4d2441",
     "semantic_hash": ""
   },
   "docs/PHYSICS_ENGINE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263193,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644763,
     "ast_hash": "e05f251d32023594b275df572bee0197",
     "semantic_hash": ""
   },
   "docs/PREPRINT_DISTRIBUTED_MEMORY_S60.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226321,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.964478,
     "ast_hash": "185ea55ad0a11f8e70e6d7ac76c9c474",
     "semantic_hash": ""
   },
   "docs/Penta-resonancia.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263222,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644794,
     "ast_hash": "435c595ecfc25568277c5aee775a86ed",
     "semantic_hash": ""
   },
   "docs/Principio de Bernoulli.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263234,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.964481,
     "ast_hash": "c7bb7cb431ec8399ac5b6f9d6c247469",
     "semantic_hash": ""
   },
   "docs/Quantum_Hacks_Architecture.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263248,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644825,
     "ast_hash": "5d99bd171d3d298756595a5490f7e4d5",
     "semantic_hash": ""
   },
   "docs/RAG (Vector Store).md": {
-    "mtime": 1794440151.9626486,
-    "seen": 1794440731.226326,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644842,
     "ast_hash": "cd44e8fdd8e363d19f279bf854da7729",
     "semantic_hash": ""
   },
   "docs/Resonant Memory (Liquid Lattice).md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226327,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644854,
     "ast_hash": "d49d89c9b3354e8c68a27350bfe90188",
     "semantic_hash": ""
   },
   "docs/SHA-256.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263284,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644868,
     "ast_hash": "b385ca1221bad57884b5621f6d85cf33",
     "semantic_hash": ""
   },
   "docs/SYNC_SENTINEL_MYCNET_STATUS_20261029.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263296,
+    "mtime": 1793406005.4564364,
+    "seen": 1794463284.9644883,
     "ast_hash": "4ece35586382cc6252ba162f25c60e9e",
     "semantic_hash": ""
   },
   "docs/Sumerian_Base60_Math.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263312,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644897,
     "ast_hash": "57b76ea70f95f6c2445a80f73d72f221",
     "semantic_hash": ""
   },
   "docs/TEOREMA DE BERNOULLI.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263324,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644914,
     "ast_hash": "1ed65946e11d9873223da153fa9618b2",
     "semantic_hash": ""
   },
   "docs/TeoriaDeCuerdas_investigacion.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263336,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644926,
     "ast_hash": "28cd105b4dd3432cccbaa1697b2f9721",
     "semantic_hash": ""
   },
   "docs/Teor\u00eda_de_la_relatividad.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226336,
+    "mtime": 1793218974.9370875,
+    "seen": 1794463284.9644952,
     "ast_hash": "02c0ad160a994674bb2da591a4f95709",
     "semantic_hash": ""
   },
   "docs/TesisResonancia.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2263372,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9644966,
     "ast_hash": "bfee90fcc11c7e00f9b07196ffce9b26",
     "semantic_hash": ""
   },
   "docs/architecture_technical.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2263386,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9644983,
     "ast_hash": "bb7486db0abed93cd93a44b29e1282af",
     "semantic_hash": ""
   },
   "docs/arquitectura_flujo_uml.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2263398,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9644995,
     "ast_hash": "dbfb16b114c5b63e352d79d2ab287bc2",
     "semantic_hash": ""
   },
   "docs/benchmarks/DIAGNOSTICO_20261029.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226341,
+    "mtime": 1793265437.850776,
+    "seen": 1794463284.9645011,
     "ast_hash": "b6d763fe855b0bde389f3e0afe0d01f8",
     "semantic_hash": ""
   },
   "docs/benchmarks/METODOLOGIA_RED.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2263424,
+    "mtime": 1793265224.4449449,
+    "seen": 1794463284.9645026,
     "ast_hash": "adff6e859c6fa0b76471ffad4b49a57a",
     "semantic_hash": ""
   },
   "docs/benchmarks/RESULTADOS_20261029.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2263439,
+    "mtime": 1793265462.7025235,
+    "seen": 1794463284.964504,
     "ast_hash": "4fa0485f69c681a692f01f4936d4ef57",
     "semantic_hash": ""
   },
   "docs/ebpf_profundo.md": {
-    "mtime": 1794440151.9711714,
-    "seen": 1794440731.2263453,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645057,
     "ast_hash": "7f14333a962c045f1428a4bf39b7720a",
     "semantic_hash": ""
   },
   "docs/el_gran_secreto_s60.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263465,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645069,
     "ast_hash": "d16a69ee082b220120683e50587d3d84",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_001_CRYSTAL_RESONANCE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263477,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964508,
     "ast_hash": "5d05d1e0ec76edad6f22a6c103fecffc",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_002_CRYSTAL_NETWORK_FULL_REPORT.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226349,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645097,
     "ast_hash": "45ca8eb7d8c531ccc15015acdd3d1a51",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_003_PID_STABILIZATION.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263503,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964511,
     "ast_hash": "324e51f2a5c939bb29ad011623a81ce9",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_004_HARMONIC_STORAGE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263515,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645126,
     "ast_hash": "6f025f694bb3b639a2536d4cab5b8c49",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_005_MERKABAH_G_ZERO.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226353,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645138,
     "ast_hash": "3305c1c08bf0ea225ada3da24dbca222",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_006_SUPERCONDUCTOR_TEST.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263541,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964515,
     "ast_hash": "0f72767e41f0ece70ed210652320b5b5",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_007_QUANTUM_STABILITY_TEST.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263556,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645164,
     "ast_hash": "78b2daa78c8eef78f768f04058ad9a9c",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_008_ECC_ARRAY.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263567,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645176,
     "ast_hash": "a6febc53c7ec9774a63688ea534deee6",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_009_LIQUID_LATTICE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226358,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964519,
     "ast_hash": "29db3173e9aab3b4d1fc3bc05f3112aa",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_010_DATA_CAPACITY.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263594,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645205,
     "ast_hash": "702b72627113d6e7050a8bd07377d693",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_011_LIQUID_CAPACITY.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263606,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645216,
     "ast_hash": "c681c49e1bd951d752399fb77f7b2f17",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_012_PHASE_COMPRESSION.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263625,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964523,
     "ast_hash": "f605ebe7fe221890a41958a5ba5caa6a",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_013_1MB_SCALE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263637,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645245,
     "ast_hash": "e4ff8f29d28dc627e9fcc2884d2ccf86",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_014_SPARSE_MEMORY.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263925,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964526,
     "ast_hash": "90a10d2db44c60aedcc647185bc89d01",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_015_RUST_BENCHMARK.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226394,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645271,
     "ast_hash": "c85c91b9d2f3b82d16c334f9bb5fe426",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_026_ARCHAEO_METRIC_CALIBRATION.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263954,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645286,
     "ast_hash": "00558f651de700c2232822e35deaccbe",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_027_YHWH_PULSE_MONITOR.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263966,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.96453,
     "ast_hash": "564854007a2367e2feb4d0b6d239423e",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_028_PENTA_RESONANCE.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226398,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645312,
     "ast_hash": "fb17b1159990c985773b301bd112882d",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_029_QUANTUM_SCHEDULER.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2263994,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645324,
     "ast_hash": "8623505985c404c6bb406f1c3d8313db",
     "semantic_hash": ""
   },
   "docs/experiments/EXP_029_V2_QUANTUM_SCHEDULER_OPTIMIZED.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2264009,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964534,
     "ast_hash": "6768037fd2ab77ead980a4c008e5c62f",
     "semantic_hash": ""
   },
   "docs/fail2ban.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2264023,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645352,
     "ast_hash": "be8c0834c677be3e8063ab9aba260a86",
     "semantic_hash": ""
   },
   "docs/hardening_linux.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2264035,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645367,
     "ast_hash": "14964a0948db2222cad5968fdba18616",
     "semantic_hash": ""
   },
   "docs/hidrodinamica_de_fluidos.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2264078,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645379,
     "ast_hash": "a6bf4b4773699a4a2885ccc5353949e4",
     "semantic_hash": ""
   },
   "docs/mathematical_model.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226409,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964539,
     "ast_hash": "3d51dc6c0119da7fdfd3474621f080bf",
     "semantic_hash": ""
   },
   "docs/matriz_s60.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2264192,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645405,
     "ast_hash": "a89409c183c98495f25af77a8f3d99ac",
     "semantic_hash": ""
   },
   "docs/micelio_profundo.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.2264206,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964542,
     "ast_hash": "85847dd35b1cfe9ce8e24beb06a9ff86",
     "semantic_hash": ""
   },
   "docs/motor_temporal_cristales.md": {
-    "mtime": 1794440151.9632292,
-    "seen": 1794440731.226422,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645433,
     "ast_hash": "2f3280aa482ff6eacf085af6d89ad650",
     "semantic_hash": ""
   },
   "docs/navegacion_estelar.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264235,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645448,
     "ast_hash": "c33f230a18aaee5655da6787a427f0dd",
     "semantic_hash": ""
   },
   "docs/nmap.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226425,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645462,
     "ast_hash": "04a8e1d167df9265e32911bc2ade6aae",
     "semantic_hash": ""
   },
   "docs/optomecanica_fluidos.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264264,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645476,
     "ast_hash": "e0a14c10088b4dc5bc094b5f8f88f41b",
     "semantic_hash": ""
   },
   "docs/redes_micelio_hexagonal.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264276,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.964549,
     "ast_hash": "1c666ecbe4926ef32f62df25e27a2106",
     "semantic_hash": ""
   },
   "docs/ruido_real_vs_simulado.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226429,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645505,
     "ast_hash": "2a6ce6319ca1cdc769ecd2b74120e1da",
     "semantic_hash": ""
   },
   "docs/s60_fisica.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264302,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645517,
     "ast_hash": "a1ae8d621d957b35cbec38ec6aace5da",
     "semantic_hash": ""
   },
   "docs/seguridad_cognitiva.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264314,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645529,
     "ast_hash": "1396172f72f927ef2f1e975b44df9801",
     "semantic_hash": ""
   },
   "docs/super_radiancia_sincronia.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226433,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645543,
     "ast_hash": "d486cf6574879df3df0ea1233cbdc1f3",
     "semantic_hash": ""
   },
   "docs/tecnologia_guardianes.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264342,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645557,
     "ast_hash": "8380124fc0cdf29f4d6a0d7d45c1a878",
     "semantic_hash": ""
   },
   "docs/telemetria_predictiva.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264357,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645572,
     "ast_hash": "35bce6ff5eb6904b4d980ddd13e40a17",
     "semantic_hash": ""
   },
   "docs/vimana_zpe_mhd.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264369,
+    "mtime": 1793218974.9410875,
+    "seen": 1794463284.9645588,
     "ast_hash": "f08abb63a04c48a362ceb1724d5dc28a",
     "semantic_hash": ""
   },
   "docs/vision_maestra_clean.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.226438,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645603,
     "ast_hash": "7898db762f58e2661ffb3d49ee5ef7fe",
     "semantic_hash": ""
   },
   "docs/yhwh_fractal_driver.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264397,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645617,
     "ast_hash": "d0f4d17d54c7d3970e36342fb6a2ef3b",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-broadcast-malla-semillas-fractales/design.md": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2264411,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.964563,
     "ast_hash": "4f7967d253f7482cfc936fd40a119f4c",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-broadcast-malla-semillas-fractales/proposal.md": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2264426,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645646,
     "ast_hash": "21ac204d97045de414180386be6de999",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-broadcast-malla-semillas-fractales/specs/network/fractal-mesh-broadcast/spec.md": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2264438,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645662,
     "ast_hash": "0fcbf05c1dc500c75c01132474c20204",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-broadcast-malla-semillas-fractales/tasks.md": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.226445,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645677,
     "ast_hash": "e78375ba71e8cc3fa9563f5c63150af4",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-comprecion-fractal-lattice/design.md": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2264466,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.964569,
     "ast_hash": "53e20cb987d77e3cde17b643c8975ea0",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-comprecion-fractal-lattice/proposal.md": {
-    "mtime": 1794440151.9757576,
-    "seen": 1794440731.2264478,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645777,
     "ast_hash": "974d32e36bcbe4fcf739ec27ed0597d3",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-comprecion-fractal-lattice/specs/memory/fractal-lattice-compression/spec.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264493,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645793,
     "ast_hash": "ec36e56ff3f5aaf0992aea618288a167",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-08-24-comprecion-fractal-lattice/tasks.md": {
-    "mtime": 1794440151.9656422,
-    "seen": 1794440731.2264507,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.964581,
     "ast_hash": "dee4c7774727d5d79f2d0e20a1d6b56d",
     "semantic_hash": ""
   },
   "openspec/changes/remediate-rust-advisories-clippy-warnings/design.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2264519,
+    "mtime": 1793719394.327543,
+    "seen": 1794463284.9645827,
     "ast_hash": "767b337820556b4a3d52c3a3cca9d480",
     "semantic_hash": ""
   },
   "openspec/changes/remediate-rust-advisories-clippy-warnings/proposal.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2264535,
+    "mtime": 1793719130.0303974,
+    "seen": 1794463284.9645844,
     "ast_hash": "f1eed69746d99f99d1335be42146992c",
     "semantic_hash": ""
   },
   "openspec/changes/remediate-rust-advisories-clippy-warnings/tasks.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2264547,
+    "mtime": 1793719961.9893835,
+    "seen": 1794463284.964586,
     "ast_hash": "30ed957a4111be85b77be911b982acfd",
     "semantic_hash": ""
   },
   "openspec/specs/memory/fractal-lattice-compression/spec.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2264562,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645875,
     "ast_hash": "2662ed827d74a7653e23d4b6cca527fb",
     "semantic_hash": ""
   },
   "openspec/specs/network/fractal-mesh-broadcast/spec.md": {
-    "mtime": 1794440151.9671173,
-    "seen": 1794440731.2264576,
+    "mtime": 1793218974.9450874,
+    "seen": 1794463284.9645908,
     "ast_hash": "e2240a443c9e72cf5bd3fea4b44e852c",
+    "semantic_hash": ""
+  },
+  "crates/mycnet-connect/build.rs": {
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.9642925,
+    "ast_hash": "ce59997ace7cb9b4630e8f43db63a108",
+    "semantic_hash": ""
+  },
+  "crates/mycnet-core/build.rs": {
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.9643018,
+    "ast_hash": "ce59997ace7cb9b4630e8f43db63a108",
+    "semantic_hash": ""
+  },
+  "crates/mycnet-daemon/build.rs": {
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.964316,
+    "ast_hash": "ce59997ace7cb9b4630e8f43db63a108",
+    "semantic_hash": ""
+  },
+  "crates/mycnet-memory/build.rs": {
+    "mtime": 1794462638.8536692,
+    "seen": 1794463284.964327,
+    "ast_hash": "ce59997ace7cb9b4630e8f43db63a108",
+    "semantic_hash": ""
+  },
+  "scripts/yatra_build_guard.rs": {
+    "mtime": 1794463237.63131,
+    "seen": 1794463284.9643624,
+    "ast_hash": "44555ed01f3d4e3c5101af18d21526a2",
+    "semantic_hash": ""
+  },
+  "docs/MYKV_V1.md": {
+    "mtime": 1794457150.7103992,
+    "seen": 1794463284.9644642,
+    "ast_hash": "6db4c65f36ed72b2d91e490b44ad5e90",
+    "semantic_hash": ""
+  },
+  "openspec/specs/memory/kv-metadata-replication/spec.md": {
+    "mtime": 1794457235.6094136,
+    "seen": 1794463284.964589,
+    "ast_hash": "cfd4c84229e1da8a31b24b83b06c5054",
     "semantic_hash": ""
   }
 }

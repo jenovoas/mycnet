@@ -10,3 +10,8 @@ serde_json  = { workspace = true }
 tracing     = { workspace = true }
 thiserror   = { workspace = true }
 tokio       = { workspace = true }
+
+[build-dependencies]
+proc-macro2 = { version = "1", features = ["span-locations"] }
+syn = { version = "2", features = ["full", "visit"] }
+toml = "0.8"
