@@ -13,7 +13,8 @@ Los crates Rust de MyCNet admiten solo aritmética entera escalada SPA/S60 o SPA
 ## Evidencia local
 
 - `cargo check --workspace --all-targets` — aprobado; no encontró floats existentes en MyCNet.
-- No se ejecutaron pruebas ni se hizo despliegue. Estado: preparación local sin commit ni push.
+- Commit publicado en `main`: `3053fb4` (`fix(yatra): bloquear punto flotante en compilaciones`). Verificaciones locales: `cargo check --workspace --all-targets`, build release y `cargo test --workspace --locked --offline` aprobados (48 pruebas y 1 prueba de documentación). No hay ejecuciones de workflow de MyCNet en GitHub.
+- No se desplegó ni reinició `mycnetd`: el cambio solo afecta compilaciones.
 
 ## Alcance
 
