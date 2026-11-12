@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Definir la conducta observable del daemon MyCNet al replicar metadatos KV exactos por MYKV v1, con confirmación de todos los peers configurados, resolución determinista de conflictos y límites volátiles explícitos. No especifica transferencia del payload ni acredita despliegue. Fuente integrada: `e8cb1ad`; guía y evidencia histórica en [MYKV_V1.md](../../../../docs/MYKV_V1.md).
+Definir la conducta observable del daemon MyCNet al replicar metadatos KV exactos por MYKV v1, con confirmación de todos los peers configurados, resolución determinista de conflictos y límites volátiles explícitos. No especifica transferencia del payload. Fuente integrada: `e8cb1ad`; guía operativa, despliegue en malla real (Fénix, Kingu y Marte con SHA-256 `1854634b...`) y evidencia de latencia (161–162 ms) en [MYKV_V1.md](../../../../docs/MYKV_V1.md).
 
 ## Requirements
 

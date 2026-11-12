@@ -1,6 +1,6 @@
 # MYKV v1 — replicación de metadatos KV
 
-Implementación integrada en `main`, fuente MyCNet `e8cb1ad` (merge publicado el 2026-11-11). Este documento describe el contrato del daemon, no un despliegue. La arquitectura y límites de alcance se anclan en el vault `docs/AGENT_BRAIN.md`: runtime Rust, aritmética SPA y P0.2/P0.3 en pausa. No se inspeccionó producción para esta documentación.
+Implementación integrada en `main` (fuente MyCNet `e8cb1ad`, merge publicado el 2026-11-11) y desplegada en malla real activa (Fénix, Kingu y Marte) el 2026-11-12 con binario release SHA-256 `1854634b...`. Este documento describe el contrato del daemon, su configuración operativa y los resultados medidos. La arquitectura y límites de alcance se anclan en el vault `docs/AGENT_BRAIN.md`: runtime Rust, aritmética SPA y P0.2/P0.3 en pausa.
 
 ## Transporte y formato
 
@@ -71,13 +71,36 @@ Registro de la fase anterior, no pruebas nuevas de esta documentación:
 - Smoke con tres procesos, binarios reales y UDP loopback: una réplica y un ACK descartados se recuperaron; Committed inicial en **163 ms**. Metadatos idénticos en los tres nodos; empate temporal, reordenamiento y duplicados convergentes; origen no configurado rechazado.
 - Peer ausente produjo timeout sin falso Committed, aunque otro peer ya había aplicado la réplica. Reiniciar el peer aislado permitió completar la entrega pendiente; no prueba recuperación durable tras reiniciar el daemon que guarda los pendientes.
 - El primer smoke encontró overflow de sumas i64 de coherencia. Se corrigieron medias globales, regionales y de vecinos acumulando en i128 antes de dividir; `SPA::from_raw` usa cociente/resto con signo y soporta `i64::MIN` sin `abs()`. Regresiones de extremos y smoke posterior aprobados.
-- Los procesos de prueba terminaron. Sin despliegue, pausa de Cortex, cambios de servicios/firewall ni medición nueva en la malla real.
+- Los procesos de prueba terminaron. La medición en malla real sobre nodos físicos se ejecutó y validó posteriormente el 2026-11-12.
 
 Trazabilidad: vault `HANDOFF.md`, sección «Memoria KV distribuida — implementación, pruebas y merge — 2026-11-11»; Sentinel integrado `1f1b6b56`, MyCNet integrado `e8cb1ad`.
 
-## Pendientes y fuentes
+## Despliegue y validación en malla real — 2026-11-12
 
-El cambio central `memoria-kv-distribuida` permanece **9/12**, sin archivar: 3.2 requiere medición en la malla real tras habilitar MYKV; 4.1 recall remoto y 4.3 CRDT están diferidos. Esta vía no transfiere payload, no añade almacenamiento durable ni prueba producción.
+La tarea 3.2 del plan OpenSpec fue completada y validada en la infraestructura activa de tres nodos físicos interconectados por WireGuard:
+
+| Nodo | IP WireGuard | Binario desplegado | Bind UDP | Peers configurados |
+|---|---|---|---|---|
+| Fénix | `10.88.0.1` | SHA-256 `1854634b...` | `0.0.0.0:4242` | Kingu (`10.88.0.2:4242`), Marte (`10.88.0.6:4242`) |
+| Kingu | `10.88.0.2` | SHA-256 `1854634b...` | `10.88.0.2:4242` | Fénix (`10.88.0.1:4242`), Marte (`10.88.0.6:4242`) |
+| Marte | `10.88.0.6` | SHA-256 `1854634b...` | `10.88.0.6:4242` | Fénix (`10.88.0.1:4242`), Kingu (`10.88.0.2:4242`) |
+
+### Aspectos operativos clave
+
+1. **Requisito All-Peer ACK:** Como MYKV v1 exige ACK de todos los peers configurados para emitir `Committed`, la presencia de un peer caído (ej. Hércules, inalcanzable por WireGuard) genera timeout de 5000 ms. Se configuraron drop-ins systemd en cada nodo para fijar la terna de peers activos.
+2. **Bind UDP en Fénix:** `kv_publish` exige conexión por loopback (`127.0.0.1:4242`). Fénix requirió `MYCNET_UDP_BIND=0.0.0.0:4242` para atender simultáneamente el loopback local y el tráfico de malla WireGuard.
+3. **Latencia y convergencia observadas:**
+   - Publicación inicial (`crystal-mesh-latency-20261112`, valor `verificacion-malla-fenix-kingu-marte`): confirmación `Committed` en **161 ms**, `timestamp_ns = 1794455381018816480`.
+   - Actualización LWW (mismo token/clave, valor `actualizacion-lww-verificada`): confirmación `Committed` en **162 ms**, `timestamp_ns = 1794455428316426647`.
+   - La latencia observada de 161–162 ms corresponde directamente al RTT físico de la red WireGuard entre Fénix y Marte (~158 ms de ping RTT).
+   - Consulta `GET /api/v1/kv-metadata?key=crystal-mesh-latency-20261112` en los 3 nodos confirmó convergencia determinista: idéntico `timestamp_ns`, `payload_hash` y `seed_bytes`.
+4. **Whitelist y seguridad:** Claves no autorizadas fueron rechazadas con error en cliente y HTTP 400 en los tres daemons.
+
+## Estado actual: 10/12 tareas completadas
+
+El cambio central `memoria-kv-distribuida` avanza a **10/12**:
+- Tarea 3.2 completada con éxito en la malla física real.
+- Tareas 4.1 (protocolo request/response para recall remoto de payload) y 4.3 (CRDT para resolución de colisiones) permanecen **diferidas**. No archivar el cambio.
 
 Fuentes del contrato integrado:
 - [`mesh_udp.rs`](../crates/mycnet-daemon/src/mesh_udp.rs): wire, autorización, ACK, retry y backpressure.

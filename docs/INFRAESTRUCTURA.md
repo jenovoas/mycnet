@@ -78,18 +78,35 @@ La metodología reproducible y el benchmark están en [`docs/benchmarks/METODOLO
 
 El repositorio contiene `HolographicSyncEngine` (`crates/mycnet-memory/src/holographic_sync.rs`), `HolographicSeed` y mecanismos de expansión. La presencia de estas capacidades en el código no demuestra sincronización correcta entre nodos desplegados.
 
-### Canal KV MYKV v1 — implementación integrada, 2026-11-11
+### Canal KV MYKV v1 — despliegue y validación en malla real, 2026-11-12
 
-El canal de replicación de metadatos está integrado y publicado en `main`,
-fuente MyCNet `e8cb1ad`. Su contrato wire, autorización, ACK/retry, límites,
-LWW, consulta HTTP y evidencia histórica de pruebas y smoke se documentan en
-[`MYKV_V1.md`](MYKV_V1.md); la conducta normativa está en la
-[spec de replicación KV](../openspec/specs/memory/kv-metadata-replication/spec.md).
+El canal de replicación de metadatos MYKV v1 fue desplegado y validado en la
+malla física activa (Fénix `10.88.0.1`, Kingu `10.88.0.2` y Marte `10.88.0.6`)
+el 2026-11-12 con binario `mycnetd` release SHA-256
+`1854634b7e52a28efdc5975612691a800dc09fed9b2862f82a0eb9504994a90d`:
 
-La integración no acredita despliegue ni sustituye la medición pendiente en
-la malla real. Solo replica metadatos, no el payload original; conserva sin
-cambios el ring y tráfico fractal legacy de 40 bytes. Las observaciones de
-infraestructura anteriores siguen siendo comprobaciones históricas fechadas.
+- **Topología de peers activa:** drop-in systemd en cada nodo configurando
+  `MYCNET_PEERS` con los otros dos nodos de la terna. Hércules (`10.88.0.4`) se
+  encuentra inaccesible por WireGuard (>3 días sin handshake); debido a que MYKV
+  v1 requiere ACK de todos los peers configurados para emitir `Committed`,
+  excluir a Hércules de la lista activa evita timeouts inducidos (5000 ms).
+- **Socket bind en Fénix:** `MYCNET_UDP_BIND=0.0.0.0:4242` habilitado vía
+  `/etc/systemd/system/mycnetd.service.d/zz-kv-peers.conf` para permitir tanto el
+  loopback requerido por el publicador Sentinel como la recepción de datagramas
+  de réplica y ACK por la interfaz WireGuard.
+- **Medición de latencia y convergencia LWW:**
+  - Publicación inicial (`crystal-mesh-latency-20261112`): confirmada con `Committed`
+    en **161 ms** (`timestamp_ns = 1794455381018816480`).
+  - Actualización LWW (mismo token/clave): confirmada con `Committed` en **162 ms**
+    (`timestamp_ns = 1794455428316426647`).
+  - La latencia observada (161–162 ms) coincide con el RTT físico de la red WireGuard
+    entre Fénix y Marte (~158 ms RTT).
+  - Consulta `GET /api/v1/kv-metadata?key=crystal-mesh-latency-20261112` en los 3
+    nodos confirmó almacenamiento determinista de idéntico `timestamp_ns`,
+    `payload_hash` y `seed_bytes`.
+- **Límites:** solo replica metadatos, no el payload original; conserva intacto el
+  ring y tráfico fractal de 40 bytes. Claves fuera de lista (`crystal-*`,
+  `portal-metrics-*`) son rechazadas (HTTP 400). Detalle completo en [`MYKV_V1.md`](MYKV_V1.md).
 
 ## Recuperación Guardian y alta de Marte — 2026-10-30/31
 
